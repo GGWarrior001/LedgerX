@@ -2,95 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+    --background: 216 33% 97%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 218 11% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --success: 160 84% 39%;
+    --success-foreground: 152 81% 96%;
 
-    --radius: 0.5rem;
+    --warning: 38 92% 50%;
+    --warning-foreground: 28 80% 52%;
 
-    --sidebar-background: 0 0% 98%;
+    --info: 217 91% 60%;
+    --info-foreground: 214 95% 93%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --radius: 0.625rem;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-bg: 222 47% 7%;
+    --sidebar-foreground: 218 11% 65%;
+    --sidebar-active: 239 84% 67%;
+    --sidebar-active-bg: 239 84% 67% / 0.15;
+    --sidebar-hover: 0 0% 100% / 0.04;
+    --sidebar-border: 0 0% 100% / 0.05;
+    --sidebar-text-active: 229 100% 84%;
+    --sidebar-text-white: 210 40% 98%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 222 47% 7%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 239 84% 67%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 228 50% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 226 47% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 226 47% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 222 47% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 222 47% 15%;
+    --muted-foreground: 218 11% 55%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --success: 160 84% 39%;
+    --success-foreground: 152 81% 96%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 45 93% 47%;
+
+    --info: 217 91% 60%;
+    --info-foreground: 213 94% 68%;
+
+    --border: 0 0% 100% / 0.07;
+    --input: 0 0% 100% / 0.07;
+    --ring: 239 84% 67%;
+
+    --sidebar-bg: 230 50% 4%;
+    --sidebar-foreground: 218 11% 45%;
+    --sidebar-border: 0 0% 100% / 0.04;
+
+    --sidebar-background: 230 50% 4%;
   }
 }
 
@@ -98,8 +114,161 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+@layer components {
+  .ledger-sidebar {
+    background: hsl(var(--sidebar-bg));
+    border-right: 1px solid hsl(var(--sidebar-border));
+  }
+
+  .nav-item {
+    @apply flex items-center gap-2.5 px-2.5 py-2 rounded-r-lg text-[13px] font-normal cursor-pointer transition-all duration-150;
+    color: hsl(var(--sidebar-foreground));
+    border-left: 2px solid transparent;
+    margin-left: -12px;
+    padding-left: 22px;
+  }
+  .nav-item:hover {
+    background: hsl(var(--sidebar-hover));
+    color: hsl(220 14% 90%);
+  }
+  .nav-item.active {
+    background: hsl(var(--sidebar-active-bg));
+    color: hsl(var(--sidebar-text-active));
+    border-left-color: hsl(var(--sidebar-active));
+    font-weight: 500;
+  }
+
+  .stat-card {
+    @apply bg-card border border-border rounded-xl p-5 transition-all duration-150 cursor-default;
+  }
+  .stat-card:hover {
+    @apply border-border/80;
+    transform: translateY(-1px);
+  }
+
+  .data-table {
+    @apply w-full border-collapse;
+  }
+  .data-table th {
+    @apply text-left text-[10.5px] font-semibold uppercase tracking-wider px-3.5 pb-2.5 border-b border-border;
+    color: hsl(var(--muted-foreground));
+  }
+  .data-table td {
+    @apply px-3.5 py-3 text-[13px] border-b border-border align-middle;
+  }
+  .data-table tbody tr {
+    @apply cursor-pointer;
+  }
+  .data-table tbody tr:hover td {
+    @apply bg-background;
+  }
+
+  .badge-status {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium;
+  }
+  .badge-paid {
+    background: hsl(var(--success) / 0.12);
+    color: hsl(160 64% 28%);
+  }
+  .dark .badge-paid {
+    background: hsl(var(--success) / 0.15);
+    color: hsl(160 64% 78%);
+  }
+  .badge-sent {
+    background: hsl(var(--info) / 0.12);
+    color: hsl(217 72% 38%);
+  }
+  .dark .badge-sent {
+    background: hsl(var(--info) / 0.15);
+    color: hsl(213 94% 68%);
+  }
+  .badge-draft {
+    @apply bg-muted text-muted-foreground;
+  }
+  .badge-overdue {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(0 72% 41%);
+  }
+  .dark .badge-overdue {
+    background: hsl(var(--destructive) / 0.15);
+    color: hsl(0 91% 71%);
+  }
+  .badge-pending {
+    background: hsl(var(--warning) / 0.12);
+    color: hsl(28 80% 36%);
+  }
+  .dark .badge-pending {
+    background: hsl(var(--warning) / 0.15);
+    color: hsl(45 93% 58%);
+  }
+
+  .icon-btn {
+    @apply w-[33px] h-[33px] flex items-center justify-center rounded-md border border-border bg-card cursor-pointer transition-all duration-150 relative;
+    color: hsl(var(--muted-foreground));
+  }
+  .icon-btn:hover {
+    @apply bg-background;
+    color: hsl(var(--foreground));
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .modal-box {
+    @apply bg-card rounded-2xl shadow-2xl overflow-hidden;
+    max-width: 96vw;
+    animation: fadeIn 150ms ease;
+  }
+
+  .form-field {
+    @apply flex flex-col gap-1.5 mb-3;
+  }
+  .form-field label {
+    @apply text-xs font-medium;
+    color: hsl(var(--muted-foreground));
+  }
+  .form-field input,
+  .form-field select {
+    @apply border border-border rounded-lg px-3 py-2 text-[13px] bg-background outline-none transition-colors duration-150;
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    border-color: hsl(var(--accent));
+  }
+  .form-field.error input,
+  .form-field.error select {
+    border-color: hsl(var(--destructive)) !important;
+    background: hsl(var(--destructive) / 0.05);
+  }
+
+  .onboarding-overlay {
+    @apply fixed inset-0 z-[90] flex items-center justify-center;
+    background: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(243 75% 59%) 50%, hsl(228 50% 5%) 100%);
+  }
+
+  .privacy-blur {
+    filter: blur(8px);
+    user-select: none;
+  }
+
+  .auto-lock-overlay {
+    @apply fixed inset-0 z-[100] flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
