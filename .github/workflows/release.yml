@@ -41,9 +41,7 @@ jobs:
       # ── Linux: Electron AppImage ──────────────────────────────────────────
       - name: Build Electron (Linux AppImage)
         if: matrix.os == 'ubuntu-latest'
-        run: npx electron-builder --linux
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --publish never
 
       - name: Upload Linux AppImage
         if: matrix.os == 'ubuntu-latest'
@@ -75,9 +73,7 @@ jobs:
       # ── Windows: Electron .exe installer ─────────────────────────────────
       - name: Build Electron (Windows .exe)
         if: matrix.os == 'windows-latest'
-        run: npx electron-builder --win
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --publish never
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
