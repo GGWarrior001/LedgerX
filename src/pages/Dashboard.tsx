@@ -43,9 +43,9 @@ export default function DashboardView() {
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 gap-3">
         <div>
-          <div className="text-xl font-bold tracking-tight">{greeting}</div>
+          <div className="text-lg md:text-xl font-bold tracking-tight">{greeting}</div>
           <div className="text-[13px] text-muted-foreground mt-0.5">Financial overview · {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</div>
         </div>
         <div className="flex gap-2">
@@ -61,7 +61,7 @@ export default function DashboardView() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 mb-5">
         <div className="stat-card">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Total Revenue
