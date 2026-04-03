@@ -1,7 +1,7 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Privacy-first personal finance and accounting app",
   "author": "Tharun",
   "type": "module",
@@ -30,14 +30,9 @@
     ],
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
-      "category": "Office",
       "maintainer": "Tharun"
-    },
-    "deb": {
-      "depends": []
     },
     "win": {
       "target": [
