@@ -53,7 +53,7 @@ jobs:
       # ── Android: Capacitor APK ────────────────────────────────────────────
       - name: Add Capacitor Android platform
         if: matrix.os == 'ubuntu-latest'
-        run: npx cap add android
+        run: if [ ! -d "android" ]; then npx cap add android; fi
 
       - name: Sync Capacitor web assets
         if: matrix.os == 'ubuntu-latest'
