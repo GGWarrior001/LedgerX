@@ -213,6 +213,7 @@ export default function DashboardView() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">
