@@ -53,7 +53,7 @@ jobs:
       # ── Android: Capacitor APK ────────────────────────────────────────────
       - name: Add Capacitor Android platform
         if: matrix.os == 'ubuntu-latest'
-        run: if [ ! -d "android" ]; then npx cap add android; fi
+        run: if [ ! -f "android/gradlew" ]; then rm -rf android && npx cap add android; fi
 
       - name: Force sync Capacitor web assets and Gradle files
         if: matrix.os == 'ubuntu-latest'
@@ -75,7 +75,7 @@ jobs:
       - name: Build Android APK (unsigned release)
         if: matrix.os == 'ubuntu-latest'
         env:
-          _JAVA_OPTIONS: -Xmx6g
+          _JAVA_OPTIONS: -Xmx4g
         run: cd android && ./gradlew assembleRelease
 
       - name: Upload Android APK
