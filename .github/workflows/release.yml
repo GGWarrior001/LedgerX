@@ -22,12 +22,12 @@ jobs:
         uses: actions/checkout@v4
 
       # ── Android / Linux only: Java + Android SDK ──────────────────────────
-      - name: Setup Java 21
+      - name: Setup Java 17
         if: matrix.os == 'ubuntu-latest'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -71,6 +71,10 @@ jobs:
       - name: Fix Gradle Wrapper permissions
         if: matrix.os == 'ubuntu-latest'
         run: chmod +x android/gradlew
+
+      - name: Clean Android build
+        if: matrix.os == 'ubuntu-latest'
+        run: cd android && ./gradlew clean
 
       - name: Build Android APK (unsigned release)
         if: matrix.os == 'ubuntu-latest'
