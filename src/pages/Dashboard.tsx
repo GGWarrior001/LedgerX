@@ -168,13 +168,14 @@ export default function DashboardView() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-[1fr_350px] gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3.5">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-[18px] pt-[18px]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[13.5px] font-semibold">Recent Transactions</span>
             </div>
           </div>
+          <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
