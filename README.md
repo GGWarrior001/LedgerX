@@ -123,4 +123,4 @@ MIT
 
 ---
 
-Built with [Lovable](https://lovable.dev)
+
