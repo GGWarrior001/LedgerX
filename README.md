@@ -1,8 +1,8 @@
 # LedgerX — Personal Finance & Accounting App
 
-A modern, privacy-first finance management application built with React and Electron, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as both a web app and a native desktop application.
+A modern, privacy-first finance management application built with React, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as a web app, a native desktop application (Electron), and a mobile app (Android via Capacitor).
 
-![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F)
+![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF)
 
 ---
 
@@ -18,6 +18,7 @@ A modern, privacy-first finance management application built with React and Elec
 - **Auto-Lock** — Session timeout with configurable duration
 - **Privacy Mode** — Hide sensitive financial data on screen
 - **AES-256 Encryption** — All stored data encrypted with PBKDF2-derived keys via crypto-js
+- **Data Export** — Back up all data as a JSON file from Settings
 - **Onboarding Flow** — Guided first-time setup
 
 ## 🛠 Tech Stack
@@ -27,6 +28,7 @@ A modern, privacy-first finance management application built with React and Elec
 | Framework | React 18 + TypeScript 5 |
 | Build Tool | Vite 5 |
 | Desktop | Electron 41 |
+| Mobile | Capacitor 6 (Android) |
 | Styling | Tailwind CSS 3 + shadcn/ui |
 | Charts | Recharts |
 | Routing | React Router v6 |
@@ -38,36 +40,37 @@ A modern, privacy-first finance management application built with React and Elec
 ## 📁 Project Structure
 
 ```
+├── android/             # Capacitor Android project
 ├── electron/
 │   ├── main.js          # Electron main process
 │   └── preload.js       # Context bridge / preload script
-src/
-├── components/
-│   ├── layout/          # Sidebar, Topbar
-│   ├── modals/          # Client, Expense, Invoice, Vendor modals
-│   ├── ui/              # shadcn/ui components
-│   ├── AutoLock.tsx      # Session timeout handler
-│   ├── NavLink.tsx       # Navigation component
-│   ├── NotificationPanel.tsx
-│   └── Onboarding.tsx    # First-time setup wizard
-├── contexts/
-│   └── AppContext.tsx    # Global app state
-├── hooks/               # Custom React hooks
-├── lib/
-│   ├── constants.ts     # App constants
-│   ├── storage.ts       # Encrypted localStorage wrapper
-│   ├── types.ts         # TypeScript interfaces
-│   └── utils.ts         # Utility functions
-├── pages/
-│   ├── Dashboard.tsx
-│   ├── Invoices.tsx
-│   ├── Expenses.tsx
-│   ├── Clients.tsx
-│   ├── Vendors.tsx
-│   ├── Reports.tsx
-│   ├── Ledger.tsx
-│   └── Settings.tsx
-└── main.tsx
+└── src/
+    ├── components/
+    │   ├── layout/          # Sidebar, Topbar
+    │   ├── modals/          # Client, Expense, Invoice, Vendor modals
+    │   ├── ui/              # shadcn/ui components
+    │   ├── AutoLock.tsx     # Session timeout handler
+    │   ├── NavLink.tsx      # Navigation component
+    │   ├── NotificationPanel.tsx
+    │   └── Onboarding.tsx   # First-time setup wizard
+    ├── contexts/
+    │   └── AppContext.tsx   # Global app state
+    ├── hooks/               # Custom React hooks
+    ├── lib/
+    │   ├── constants.ts     # App constants
+    │   ├── storage.ts       # Encrypted localStorage wrapper
+    │   ├── types.ts         # TypeScript interfaces
+    │   └── utils.ts         # Utility functions
+    ├── pages/
+    │   ├── Dashboard.tsx
+    │   ├── Invoices.tsx
+    │   ├── Expenses.tsx
+    │   ├── Clients.tsx
+    │   ├── Vendors.tsx
+    │   ├── Reports.tsx
+    │   ├── Ledger.tsx
+    │   └── Settings.tsx
+    └── main.tsx
 ```
 
 ## 🚀 Getting Started
@@ -107,8 +110,21 @@ npm run preview
 npm run build
 npm run electron
 
-# Package the desktop app as an AppImage / .deb (Linux)
+# Package the desktop app as an AppImage (Linux) or NSIS installer (Windows)
 npm run electron:build
+```
+
+### Mobile App (Android via Capacitor)
+
+```bash
+# Build the web assets
+npm run build
+
+# Sync with the Android project
+npx cap sync android
+
+# Open in Android Studio to run or build the APK
+npx cap open android
 ```
 
 ## 🔐 Security Architecture
@@ -120,7 +136,7 @@ LedgerX encrypts all financial data at rest using:
 3. **Auto-lock** after configurable inactivity timeout
 4. **Privacy mode** to mask sensitive values on screen
 
-> All encryption runs client-side. No data leaves the browser.
+> All encryption runs client-side. No data leaves the device.
 
 ## 🧪 Testing
 
