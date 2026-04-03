@@ -1,22 +1,33 @@
-name: Release Linux
+name: Release
 
 on:
   push:
     tags:
       - "v*"
+
 permissions:
   contents: write
-  
+
 jobs:
-  build-linux:
-    name: Build Linux release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # ── Android / Linux only: Java + Android SDK ──────────────────────────
+      - name: Setup Java 21
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -27,29 +38,74 @@ jobs:
       - name: Build Vite app
         run: bun run build
 
-      - name: Build Electron packages (AppImage + .deb)
+      # ── Linux: Electron AppImage ──────────────────────────────────────────
+      - name: Build Electron (Linux AppImage)
+        if: matrix.os == 'ubuntu-latest'
         run: npx electron-builder --linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage artifact
+      - name: Upload Linux AppImage
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: LedgerX-AppImage
+          name: linux-dist
           path: dist/*.AppImage
 
-      - name: Upload .deb artifact
+      # ── Android: Capacitor APK ────────────────────────────────────────────
+      - name: Add Capacitor Android platform
+        if: matrix.os == 'ubuntu-latest'
+        run: npx cap add android
+
+      - name: Sync Capacitor web assets
+        if: matrix.os == 'ubuntu-latest'
+        run: npx cap sync android
+
+      - name: Build Android APK (unsigned release)
+        if: matrix.os == 'ubuntu-latest'
+        run: cd android && ./gradlew assembleRelease
+
+      - name: Upload Android APK
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: LedgerX-deb
-          path: dist/*.deb
+          name: android-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      # ── Windows: Electron .exe installer ─────────────────────────────────
+      - name: Build Electron (Windows .exe)
+        if: matrix.os == 'windows-latest'
+        run: npx electron-builder --win
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows installer
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-dist
+          path: dist/*.exe
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.AppImage
-            dist/*.deb
+          allowUpdates: true
           generate_release_notes: true
+          files: |
+            artifacts/linux-dist/*.AppImage
+            artifacts/windows-dist/*.exe
+            artifacts/android-apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
