@@ -51,36 +51,23 @@ jobs:
           path: dist/*.AppImage
 
       # ── Android: Capacitor APK ────────────────────────────────────────────
-      - name: Add Capacitor Android platform
+      - name: Setup Android platform
         if: matrix.os == 'ubuntu-latest'
-        run: if [ ! -f "android/gradlew" ]; then rm -rf android && npx cap add android; fi
-
-      - name: Force sync Capacitor web assets and Gradle files
-        if: matrix.os == 'ubuntu-latest'
-        run: npx cap sync android
+        run: |
+          npx cap telemetry off
+          if [ ! -d "android" ]; then npx cap add android; fi
+          npx cap sync android
 
       - name: Ensure Gradle Wrapper exists
         if: matrix.os == 'ubuntu-latest'
-        run: cd android && gradle wrapper
-
-      # Overwrite gradle.properties after cap add android (which regenerates the android dir)
-      - name: Write android/gradle.properties
-        if: matrix.os == 'ubuntu-latest'
-        run: echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g" > android/gradle.properties
-
-      - name: Fix Gradle Wrapper permissions
-        if: matrix.os == 'ubuntu-latest'
-        run: chmod +x android/gradlew
-
-      - name: Clean Android build
-        if: matrix.os == 'ubuntu-latest'
-        run: cd android && ./gradlew clean
+        run: |
+          if [ ! -f "android/gradlew" ]; then cd android && gradle wrapper; fi
 
       - name: Build Android APK (unsigned release)
         if: matrix.os == 'ubuntu-latest'
         env:
           _JAVA_OPTIONS: -Xmx4g
-        run: cd android && ./gradlew assembleRelease
+        run: cd android && chmod +x gradlew && ./gradlew clean assembleRelease
 
       - name: Upload Android APK
         if: matrix.os == 'ubuntu-latest'
