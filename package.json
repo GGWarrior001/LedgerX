@@ -1,7 +1,7 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "Privacy-first personal finance and accounting app",
   "type": "module",
   "main": "electron/main.js",
