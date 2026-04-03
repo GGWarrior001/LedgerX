@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppProvider, useApp } from '@/contexts/AppContext';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
@@ -14,6 +15,7 @@ import SettingsView from '@/pages/Settings';
 
 function AppContent() {
   const { profile, activeView, locked } = useApp();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (locked) return <AutoLock />;
   if (!profile) return <Onboarding />;
@@ -31,10 +33,10 @@ function AppContent() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Topbar />
-        <div className="flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: 'thin' }}>
+      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex-1 overflow-y-auto p-3 md:p-6" style={{ scrollbarWidth: 'thin' }}>
           {views[activeView] || <DashboardView />}
         </div>
       </main>

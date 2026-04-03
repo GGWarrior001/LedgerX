@@ -1,6 +1,8 @@
 import { useApp } from '@/contexts/AppContext';
 import { ViewId } from '@/lib/types';
 import { currentFY, getInitials } from '@/lib/constants';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const NAV_SECTIONS = [
   {
@@ -32,7 +34,12 @@ const NAV_SECTIONS = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { activeView, setActiveView, dark, toggleTheme, profile, invoices } = useApp();
 
   const overdueCount = invoices.filter(i => i.status === 'overdue').length;
@@ -40,8 +47,13 @@ export default function Sidebar() {
   const ini = getInitials(p?.name || p?.businessName || 'LX');
   const fyLabel = `${p?.businessName || 'LedgerX'} · FY ${currentFY(p?.fiscalYear || 'Apr-Mar')}`;
 
+  const handleNav = (id: ViewId) => {
+    setActiveView(id);
+    onNavigate?.();
+  };
+
   return (
-    <aside className="ledger-sidebar w-[242px] min-w-[242px] flex flex-col overflow-y-auto h-screen">
+    <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-[22px] border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground text-[13px] font-bold tracking-tight shrink-0">LX</div>
@@ -52,7 +64,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav Sections */}
-      <div className="flex-1 px-3 mt-1.5">
+      <div className="flex-1 px-3 mt-1.5 overflow-y-auto">
         {NAV_SECTIONS.map(section => (
           <div key={section.label} className="mb-0.5">
             <div className="text-[10px] font-semibold tracking-widest uppercase px-2 pt-2.5 pb-1.5" style={{ color: '#4B5563' }}>{section.label}</div>
@@ -60,7 +72,7 @@ export default function Sidebar() {
               <div
                 key={item.id}
                 className={`nav-item ${activeView === item.id ? 'active' : ''}`}
-                onClick={() => setActiveView(item.id)}
+                onClick={() => handleNav(item.id)}
               >
                 {item.icon}
                 {item.label}
@@ -79,7 +91,7 @@ export default function Sidebar() {
       <div className="px-3 mb-2">
         <div
           className={`nav-item ${activeView === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveView('settings')}
+          onClick={() => handleNav('settings')}
         >
           <svg className="w-[15px] h-[15px] opacity-70" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.892 3.433-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.892-1.64-.901-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 003.06 9.377l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 004.175 4.82l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/></svg>
           Settings
@@ -106,6 +118,26 @@ export default function Sidebar() {
           <div className="text-[11px]" style={{ color: '#6B7280' }}>{p?.role || 'Admin'}{p?.city ? ` · ${p.city}` : ''}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function Sidebar({ open, onOpenChange }: SidebarProps) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="left" className="w-[270px] p-0 ledger-sidebar border-r-0">
+          <SidebarContent onNavigate={() => onOpenChange?.(false)} />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <aside className="ledger-sidebar w-[242px] min-w-[242px] flex flex-col overflow-y-auto h-screen hidden md:flex">
+      <SidebarContent />
     </aside>
   );
 }
