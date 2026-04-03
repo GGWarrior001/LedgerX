@@ -43,9 +43,9 @@ export default function DashboardView() {
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 gap-3">
         <div>
-          <div className="text-xl font-bold tracking-tight">{greeting}</div>
+          <div className="text-lg md:text-xl font-bold tracking-tight">{greeting}</div>
           <div className="text-[13px] text-muted-foreground mt-0.5">Financial overview · {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</div>
         </div>
         <div className="flex gap-2">
@@ -61,7 +61,7 @@ export default function DashboardView() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 mb-5">
         <div className="stat-card">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Total Revenue
@@ -105,7 +105,7 @@ export default function DashboardView() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-[1fr_310px] gap-3.5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-3.5 mb-5">
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -168,13 +168,14 @@ export default function DashboardView() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-[1fr_350px] gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3.5">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-[18px] pt-[18px]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[13.5px] font-semibold">Recent Transactions</span>
             </div>
           </div>
+          <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
@@ -212,6 +213,7 @@ export default function DashboardView() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">

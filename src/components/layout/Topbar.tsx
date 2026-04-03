@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import NotificationPanel from '@/components/NotificationPanel';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', invoices: 'Invoices', expenses: 'Expenses',
@@ -8,19 +9,37 @@ const VIEW_TITLES: Record<string, string> = {
   ledger: 'Chart of Accounts', settings: 'Settings',
 };
 
-export default function Topbar() {
+interface TopbarProps {
+  onMenuClick?: () => void;
+}
+
+export default function Topbar({ onMenuClick }: TopbarProps) {
   const { activeView, toggleTheme, dark, notifications, togglePrivacy, privacyMode } = useApp();
   const [notifOpen, setNotifOpen] = useState(false);
   const [search, setSearch] = useState('');
   const unread = notifications.filter(n => !n.read).length;
+  const isMobile = useIsMobile();
 
   return (
     <>
-      <div className="h-[58px] bg-card border-b border-border flex items-center px-6 gap-3.5 shrink-0">
-        <span className="text-[15px] font-semibold flex-1">{VIEW_TITLES[activeView] || activeView}</span>
+      <div className="h-[58px] bg-card border-b border-border flex items-center px-3 md:px-6 gap-2 md:gap-3.5 shrink-0">
+        {/* Mobile hamburger */}
+        {isMobile && (
+          <button
+            onClick={onMenuClick}
+            className="icon-btn mr-1"
+            aria-label="Open menu"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 3h12v1.5H2V3zm0 4.25h12v1.5H2v-1.5zm0 4.25h12V13H2v-1.5z"/>
+            </svg>
+          </button>
+        )}
 
-        {/* Search */}
-        <div className="flex items-center bg-background border border-border rounded-lg px-2.5 gap-1.5 h-[33px] w-[210px] focus-within:border-primary transition-colors">
+        <span className="text-[14px] md:text-[15px] font-semibold flex-1 truncate">{VIEW_TITLES[activeView] || activeView}</span>
+
+        {/* Search - hidden on small mobile */}
+        <div className="hidden sm:flex items-center bg-background border border-border rounded-lg px-2.5 gap-1.5 h-[33px] w-[160px] md:w-[210px] focus-within:border-primary transition-colors">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="text-muted-foreground shrink-0">
             <path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.099zM12 6.5a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z"/>
           </svg>
