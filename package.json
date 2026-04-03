@@ -1,7 +1,7 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Privacy-first personal finance and accounting app",
   "type": "module",
   "main": "electron/main.js",
@@ -21,7 +21,7 @@
     "productName": "LedgerX",
     "directories": {
       "buildResources": "public",
-      "output": "release"
+      "output": "dist"
     },
     "files": [
       "dist/**/*",

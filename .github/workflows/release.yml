@@ -30,26 +30,26 @@ jobs:
       - name: Build Electron packages (AppImage + .deb)
         run: npx electron-builder --linux
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: LedgerX-AppImage
-          path: release/*.AppImage
+          path: dist/*.AppImage
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: LedgerX-deb
-          path: release/*.deb
+          path: dist/*.deb
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/*.AppImage
-            release/*.deb
+            dist/*.AppImage
+            dist/*.deb
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
