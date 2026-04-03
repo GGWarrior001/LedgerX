@@ -1,8 +1,8 @@
 # LedgerX — Personal Finance & Accounting App
 
-A modern, privacy-first finance management application built with React, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting.
+A modern, privacy-first finance management application built with React and Electron, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as both a web app and a native desktop application.
 
-![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF)
+![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F)
 
 ---
 
@@ -26,6 +26,7 @@ A modern, privacy-first finance management application built with React, featuri
 |-------|-----------|
 | Framework | React 18 + TypeScript 5 |
 | Build Tool | Vite 5 |
+| Desktop | Electron 41 |
 | Styling | Tailwind CSS 3 + shadcn/ui |
 | Charts | Recharts |
 | Routing | React Router v6 |
@@ -37,6 +38,9 @@ A modern, privacy-first finance management application built with React, featuri
 ## 📁 Project Structure
 
 ```
+├── electron/
+│   ├── main.js          # Electron main process
+│   └── preload.js       # Context bridge / preload script
 src/
 ├── components/
 │   ├── layout/          # Sidebar, Topbar
@@ -77,8 +81,8 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ledgerx.git
-cd ledgerx
+git clone https://github.com/GGWarrior001/LedgerX.git
+cd LedgerX
 
 # Install dependencies
 npm install
@@ -94,6 +98,17 @@ The app will be available at `http://localhost:5173`.
 ```bash
 npm run build
 npm run preview
+```
+
+### Desktop App (Electron)
+
+```bash
+# Run the desktop app in development (build first)
+npm run build
+npm run electron
+
+# Package the desktop app as an AppImage / .deb (Linux)
+npm run electron:build
 ```
 
 ## 🔐 Security Architecture
