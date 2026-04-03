@@ -1,8 +1,12 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Privacy-first personal finance and accounting app",
+  "author": {
+    "name": "Tharun",
+    "email": "tharun@ledgerx.app"
+  },
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -32,7 +36,8 @@
         "AppImage",
         "deb"
       ],
-      "category": "Office"
+      "category": "Office",
+      "maintainer": "Tharun <tharun@ledgerx.app>"
     },
     "deb": {
       "depends": []
