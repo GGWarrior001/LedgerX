@@ -1,7 +1,7 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.2.7",
+  "version": "1.2.9",
   "description": "Privacy-first personal finance and accounting app",
   "author": "Tharun",
   "type": "module",
