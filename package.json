@@ -1,12 +1,9 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Privacy-first personal finance and accounting app",
-  "author": {
-    "name": "Tharun",
-    "email": "tharun@ledgerx.app"
-  },
+  "author": "Tharun",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {

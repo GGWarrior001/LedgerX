@@ -64,7 +64,7 @@ jobs:
           cd android && gradle wrapper
           cd ..
           npx cap sync android
-          cd android && chmod +x gradlew && ./gradlew assembleDebug --stacktrace
+          cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android APK
         if: matrix.os == 'ubuntu-latest'
