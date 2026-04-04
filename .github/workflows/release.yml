@@ -54,15 +54,17 @@ jobs:
       - name: Build Android APK (debug)
         if: matrix.os == 'ubuntu-latest'
         env:
-          GRADLE_OPTS: "-Xmx6g -XX:MaxMetaspaceSize=1g"
+          _JAVA_OPTIONS: -Xmx4g
         run: |
           npx cap telemetry off
           cp android/gradle.properties /tmp/gradle.properties
           rm -rf android
           npx cap add android
           cp /tmp/gradle.properties android/gradle.properties
+          cd android && gradle wrapper
+          cd ..
           npx cap sync android
-          cd android && chmod +x gradlew && ./gradlew clean assembleDebug
+          cd android && chmod +x gradlew && ./gradlew assembleDebug --stacktrace
 
       - name: Upload Android APK
         if: matrix.os == 'ubuntu-latest'
