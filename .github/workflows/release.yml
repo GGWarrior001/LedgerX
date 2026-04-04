@@ -51,23 +51,25 @@ jobs:
           path: dist/*.AppImage
 
       # ── Android: Capacitor APK ────────────────────────────────────────────
-      - name: Build Android APK (unsigned release)
+      - name: Build Android APK (debug)
         if: matrix.os == 'ubuntu-latest'
         env:
-          _JAVA_OPTIONS: -Xmx4g
+          GRADLE_OPTS: "-Xmx6g -XX:MaxMetaspaceSize=1g"
         run: |
           npx cap telemetry off
+          cp android/gradle.properties /tmp/gradle.properties
           rm -rf android
           npx cap add android
+          cp /tmp/gradle.properties android/gradle.properties
           npx cap sync android
-          cd android && chmod +x gradlew && ./gradlew clean assembleRelease
+          cd android && chmod +x gradlew && ./gradlew clean assembleDebug
 
       - name: Upload Android APK
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
 
       # ── Windows: Electron .exe installer ─────────────────────────────────
       - name: Build Electron (Windows .exe)

@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.2.3",
   "description": "Privacy-first personal finance and accounting app",
-  "author": "Tharun",
+  "author": {
+    "name": "Tharun",
+    "email": "tharun@ledgerx.app"
+  },
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
