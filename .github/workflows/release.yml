@@ -61,9 +61,9 @@ jobs:
           rm -rf android
           npx cap add android
           cp /tmp/gradle.properties android/gradle.properties
-          cd android && gradle wrapper
-          cd ..
           npx cap sync android
+          sed -i "s/kotlin_version = ['\"][^'\"]*['\"]/kotlin_version = '1.9.22'/" android/build.gradle
+          cd android && ./gradlew wrapper --gradle-version 8.7
           cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android APK
