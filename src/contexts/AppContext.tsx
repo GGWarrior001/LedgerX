@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Invoice, Expense, Client, Vendor, Profile, Notification, ViewId, AppSettings } from '@/lib/types';
 import { storage } from '@/lib/storage';
 import { getInitials, fmt, DEFAULT_INVOICES, DEFAULT_EXPENSES, DEFAULT_CLIENTS, DEFAULT_VENDORS } from '@/lib/constants';
+import { fetchCloudData, saveCloudData, CloudData, addLedgerEntry, fetchLedgerEntries } from '@/lib/firestoreSync';
 
 const DEFAULT_PROFILE: Profile = { name: '', role: 'Admin', city: '', businessName: 'LedgerX', fiscalYear: 'Apr-Mar', currency: '₹', dataChoice: 'demo' };
 
@@ -64,7 +65,7 @@ function buildNotifications(invoices: Invoice[]): Notification[] {
   return notifs;
 }
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
+export function AppProvider({ children, cloudUid }: { children: React.ReactNode; cloudUid?: string | null }) {
   const [state, setState] = useState<AppState>(() => {
     const dark = localStorage.getItem('lx_dark') === '1';
     const profile = storage.load<Profile | null>('lx_profile', null);
@@ -127,6 +128,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     storage.save('lx_ven_id', s.nextVendorId);
   }, []);
 
+  // Cloud persist: save a snapshot to Firestore whenever the uid or core data changes
+  const cloudPersist = useCallback((s: AppState, uid: string) => {
+    const data: CloudData = {
+      invoices: s.invoices,
+      expenses: s.expenses,
+      clients: s.clients,
+      vendors: s.vendors,
+      profile: s.profile,
+      nextInvId: s.nextInvId,
+      nextExpId: s.nextExpId,
+      nextClientId: s.nextClientId,
+      nextVendorId: s.nextVendorId,
+    };
+    saveCloudData(uid, data);
+  }, []);
+
+  // Unified persist: local storage + cloud (when signed in)
+  const persistAll = useCallback((s: AppState) => {
+    persist(s);
+    if (cloudUid) cloudPersist(s, cloudUid);
+  }, [persist, cloudPersist, cloudUid]);
+
+  // Fetch cloud data when a user signs in (cloudUid becomes non-null)
+  const prevCloudUidRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (cloudUid === prevCloudUidRef.current) return;
+    prevCloudUidRef.current = cloudUid;
+    if (!cloudUid) return;
+    Promise.all([
+      fetchCloudData(cloudUid),
+      fetchLedgerEntries(cloudUid),
+    ]).then(([cloud, entries]) => {
+      // Merge: entries subcollection takes precedence over the snapshot doc
+      // if it contains data; otherwise fall back to the snapshot.
+      const hasEntries = entries.invoices.length > 0 || entries.expenses.length > 0;
+      const invoices = hasEntries ? entries.invoices : (cloud?.invoices ?? []);
+      const expenses = hasEntries ? entries.expenses : (cloud?.expenses ?? []);
+      if (!cloud && !hasEntries) return;
+      setState(s => {
+        const newState = {
+          ...s,
+          invoices,
+          expenses,
+          clients: cloud?.clients ?? s.clients,
+          vendors: cloud?.vendors ?? s.vendors,
+          profile: cloud?.profile ?? s.profile,
+          nextInvId: cloud?.nextInvId ?? s.nextInvId,
+          nextExpId: cloud?.nextExpId ?? s.nextExpId,
+          nextClientId: cloud?.nextClientId ?? s.nextClientId,
+          nextVendorId: cloud?.nextVendorId ?? s.nextVendorId,
+          notifications: buildNotifications(invoices),
+        };
+        persist(newState);
+        if (cloud?.profile) storage.save('lx_profile', cloud.profile);
+        return newState;
+      });
+    }).catch(err => {
+      console.error('[LedgerX] Cloud sync error:', err);
+    });
+  }, [cloudUid, persist]);
+
   const setActiveView = useCallback((v: ViewId) => setState(s => ({ ...s, activeView: v })), []);
 
   const toggleTheme = useCallback(() => {
@@ -163,19 +225,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return c;
       });
       const newState = { ...s, invoices: [newInv, ...s.invoices], clients, nextInvId: id + 1 };
-      persist(newState);
+      persistAll(newState);
+      if (cloudUid) addLedgerEntry(cloudUid, 'invoice', newInv).catch(() => {});
       return newState;
     });
-  }, [persist]);
+  }, [persistAll, cloudUid]);
 
   const addExpense = useCallback((exp: Omit<Expense, 'id'>) => {
     setState(s => {
       const id = s.nextExpId;
-      const newState = { ...s, expenses: [{ ...exp, id }, ...s.expenses], nextExpId: id + 1 };
-      persist(newState);
+      const newExp = { ...exp, id };
+      const newState = { ...s, expenses: [newExp, ...s.expenses], nextExpId: id + 1 };
+      persistAll(newState);
+      if (cloudUid) addLedgerEntry(cloudUid, 'expense', newExp).catch(() => {});
       return newState;
     });
-  }, [persist]);
+  }, [persistAll, cloudUid]);
 
   const addClient = useCallback((cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>) => {
     setState(s => {
@@ -183,10 +248,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const colors = ['#6366F1','#EC4899','#10B981','#F97316','#8B5CF6','#14B8A6','#F59E0B','#3B82F6'];
       const newClient: Client = { ...cli, id, initials: getInitials(cli.name), color: colors[id % colors.length], billed: 0, outstanding: 0, invoices: 0 };
       const newState = { ...s, clients: [...s.clients, newClient], nextClientId: id + 1 };
-      persist(newState);
+      persistAll(newState);
       return newState;
     });
-  }, [persist]);
+  }, [persistAll]);
 
   const addVendor = useCallback((ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>) => {
     setState(s => {
@@ -194,10 +259,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const colors = ['#F59E0B','#10B981','#8B5CF6','#3B82F6','#EC4899','#6366F1'];
       const newVendor: Vendor = { ...ven, id, initials: getInitials(ven.name), color: colors[id % colors.length], totalSpent: 0 };
       const newState = { ...s, vendors: [...s.vendors, newVendor], nextVendorId: id + 1 };
-      persist(newState);
+      persistAll(newState);
       return newState;
     });
-  }, [persist]);
+  }, [persistAll]);
 
   const saveSettingsFn = useCallback((p: Partial<Profile>) => {
     setState(s => {
@@ -223,10 +288,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         nextInvId: 7, nextExpId: 7, nextClientId: 4, nextVendorId: 5,
         notifications: buildNotifications(DEFAULT_INVOICES),
       };
-      persist(newState);
+      persistAll(newState);
       return newState;
     });
-  }, [persist]);
+  }, [persistAll]);
 
   const loadFreshData = useCallback(() => {
     setState(s => {
@@ -245,10 +310,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const profile = data.profile && typeof data.profile === 'object' ? data.profile as Profile : s.profile;
       if (profile) storage.save('lx_profile', profile);
       const newState = { ...s, invoices, expenses, clients, vendors, profile, notifications: buildNotifications(invoices) };
-      persist(newState);
+      persistAll(newState);
       return newState;
     });
-  }, [persist]);
+  }, [persistAll]);
 
   const markNotifRead = useCallback((id: number) => {
     setState(s => {
