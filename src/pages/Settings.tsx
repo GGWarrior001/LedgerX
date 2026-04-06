@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 
 export default function SettingsView() {
   const { profile, saveSettings, resetData, setupEncryption } = useApp();
+  const { user, logOut } = useAuth();
   const p = profile || { name: '', role: 'Admin', city: '', businessName: 'LedgerX', fiscalYear: 'Apr-Mar', currency: '₹', dataChoice: '' };
 
   const [name, setName] = useState(p.name);
@@ -31,6 +33,16 @@ export default function SettingsView() {
     setupEncryption(passcode);
     setPasscode('');
     toast.success('Encryption enabled. Your data is now secured.');
+  };
+
+  const handleLogout = async () => {
+    if (!confirm('Sign out of your account? Your data will remain synced in the cloud.')) return;
+    try {
+      await logOut();
+      toast.success('Signed out successfully');
+    } catch {
+      toast.error('Failed to sign out. Please try again.');
+    }
   };
 
   const exportData = () => {
@@ -112,6 +124,25 @@ export default function SettingsView() {
           <button onClick={exportData} className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-background border border-border cursor-pointer hover:bg-muted transition-colors w-fit">Export All Data</button>
         </div>
       </div>
+
+      {/* Account */}
+      {user && (
+        <div className="bg-card border border-border rounded-xl p-5 mb-4">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account</div>
+          <div className="grid grid-cols-[180px_1fr] items-center gap-3.5 py-3">
+            <div>
+              <label className="text-[13px] font-medium">Signed in as</label>
+              <div className="text-[11.5px] text-muted-foreground mt-0.5">{user.email}</div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-background border border-border cursor-pointer hover:bg-muted transition-colors w-fit"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <div className="bg-card border border-border rounded-xl p-5">
