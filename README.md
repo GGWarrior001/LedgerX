@@ -2,7 +2,7 @@
 
 A modern, privacy-first finance management application built with React, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as a web app, a native desktop application (Electron), and a mobile app (Android via Capacitor).
 
-![Version](https://img.shields.io/badge/version-1.2.9-brightgreen) ![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-1.3.0-brightgreen) ![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF) ![Firebase](https://img.shields.io/badge/Firebase-12-FFCA28) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
@@ -23,6 +23,8 @@ A modern, privacy-first finance management application built with React, featuri
 - **Multi-Currency Support** — Configurable currency symbol per business
 - **Fiscal Year Settings** — Flexible fiscal year configuration
 - **Notifications** — In-app notification panel
+- **Cloud Sync** — Optional Firebase authentication (email/password) with Firestore-backed cloud sync so your data is available across devices
+- **Offline-First** — App works fully without a Firebase account; cloud sync activates automatically once signed in
 
 ## 🛠 Tech Stack
 
@@ -38,6 +40,7 @@ A modern, privacy-first finance management application built with React, featuri
 | State | React Context + TanStack Query |
 | Forms | React Hook Form + Zod |
 | Encryption | crypto-js (AES-256-CBC, PBKDF2) |
+| Auth / Sync | Firebase Auth + Firestore |
 | Testing | Vitest + Playwright |
 
 ## 📁 Project Structure
@@ -57,14 +60,18 @@ A modern, privacy-first finance management application built with React, featuri
     │   ├── NotificationPanel.tsx
     │   └── Onboarding.tsx   # First-time setup wizard
     ├── contexts/
-    │   └── AppContext.tsx   # Global app state
+    │   ├── AppContext.tsx   # Global app state
+    │   └── AuthContext.tsx  # Firebase authentication state
     ├── hooks/               # Custom React hooks
     ├── lib/
     │   ├── constants.ts     # App constants (currencies, fiscal years, categories)
+    │   ├── firebase.ts      # Firebase app / auth / Firestore initialisation
+    │   ├── firestoreSync.ts # Cloud data read/write helpers
     │   ├── storage.ts       # Encrypted localStorage wrapper
     │   ├── types.ts         # TypeScript interfaces
     │   └── utils.ts         # Utility functions
     ├── pages/
+    │   ├── Auth.tsx         # Sign-in / sign-up page (Firebase)
     │   ├── Dashboard.tsx
     │   ├── Expenses.tsx
     │   ├── Invoices.tsx
@@ -101,6 +108,22 @@ bun run dev
 ```
 
 The app will be available at `http://localhost:5173`.
+
+### Firebase Setup (Optional — for Cloud Sync)
+
+Cloud sync is opt-in. The app runs fully offline without a Firebase project.
+
+To enable authentication and Firestore sync:
+
+1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
+2. Enable **Email/Password** authentication under *Authentication → Sign-in method*.
+3. Enable **Firestore Database** (start in production or test mode).
+4. Copy `.env.example` to `.env` and fill in your project credentials:
+
+```bash
+cp .env.example .env
+# Then edit .env with your VITE_FIREBASE_* values
+```
 
 ### Build for Production
 
@@ -142,7 +165,9 @@ LedgerX encrypts all financial data at rest using:
 3. **Auto-lock** after configurable inactivity timeout
 4. **Privacy mode** to mask sensitive values on screen
 
-> All encryption runs client-side. No data leaves the device.
+> All encryption runs client-side. No data leaves the device unless you opt in to cloud sync.
+
+When cloud sync is enabled, data is stored in **Firestore** under your authenticated Firebase user account. Sign-in/sign-up is handled via **Firebase Authentication** (email/password).
 
 ## 🧪 Testing
 
