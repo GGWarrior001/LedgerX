@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Invoice, Expense, Client, Vendor, Profile, Notification, ViewId, AppSettings } from '@/lib/types';
 import { storage } from '@/lib/storage';
 import { getInitials, fmt, DEFAULT_INVOICES, DEFAULT_EXPENSES, DEFAULT_CLIENTS, DEFAULT_VENDORS } from '@/lib/constants';
-import { fetchCloudData, saveCloudData, CloudData } from '@/lib/firestoreSync';
+import { fetchCloudData, saveCloudData, CloudData, addLedgerEntry, fetchLedgerEntries } from '@/lib/firestoreSync';
 
 const DEFAULT_PROFILE: Profile = { name: '', role: 'Admin', city: '', businessName: 'LedgerX', fiscalYear: 'Apr-Mar', currency: '₹', dataChoice: 'demo' };
 
@@ -156,24 +156,32 @@ export function AppProvider({ children, cloudUid }: { children: React.ReactNode;
     if (cloudUid === prevCloudUidRef.current) return;
     prevCloudUidRef.current = cloudUid;
     if (!cloudUid) return;
-    fetchCloudData(cloudUid).then(cloud => {
-      if (!cloud) return;
+    Promise.all([
+      fetchCloudData(cloudUid),
+      fetchLedgerEntries(cloudUid),
+    ]).then(([cloud, entries]) => {
+      // Merge: entries subcollection takes precedence over the snapshot doc
+      // if it contains data; otherwise fall back to the snapshot.
+      const hasEntries = entries.invoices.length > 0 || entries.expenses.length > 0;
+      const invoices = hasEntries ? entries.invoices : (cloud?.invoices ?? []);
+      const expenses = hasEntries ? entries.expenses : (cloud?.expenses ?? []);
+      if (!cloud && !hasEntries) return;
       setState(s => {
         const newState = {
           ...s,
-          invoices: cloud.invoices,
-          expenses: cloud.expenses,
-          clients: cloud.clients,
-          vendors: cloud.vendors,
-          profile: cloud.profile ?? s.profile,
-          nextInvId: cloud.nextInvId,
-          nextExpId: cloud.nextExpId,
-          nextClientId: cloud.nextClientId,
-          nextVendorId: cloud.nextVendorId,
-          notifications: buildNotifications(cloud.invoices),
+          invoices,
+          expenses,
+          clients: cloud?.clients ?? s.clients,
+          vendors: cloud?.vendors ?? s.vendors,
+          profile: cloud?.profile ?? s.profile,
+          nextInvId: cloud?.nextInvId ?? s.nextInvId,
+          nextExpId: cloud?.nextExpId ?? s.nextExpId,
+          nextClientId: cloud?.nextClientId ?? s.nextClientId,
+          nextVendorId: cloud?.nextVendorId ?? s.nextVendorId,
+          notifications: buildNotifications(invoices),
         };
         persist(newState);
-        if (cloud.profile) storage.save('lx_profile', cloud.profile);
+        if (cloud?.profile) storage.save('lx_profile', cloud.profile);
         return newState;
       });
     }).catch(err => {
@@ -218,18 +226,21 @@ export function AppProvider({ children, cloudUid }: { children: React.ReactNode;
       });
       const newState = { ...s, invoices: [newInv, ...s.invoices], clients, nextInvId: id + 1 };
       persistAll(newState);
+      if (cloudUid) addLedgerEntry(cloudUid, 'invoice', newInv);
       return newState;
     });
-  }, [persistAll]);
+  }, [persistAll, cloudUid]);
 
   const addExpense = useCallback((exp: Omit<Expense, 'id'>) => {
     setState(s => {
       const id = s.nextExpId;
-      const newState = { ...s, expenses: [{ ...exp, id }, ...s.expenses], nextExpId: id + 1 };
+      const newExp = { ...exp, id };
+      const newState = { ...s, expenses: [newExp, ...s.expenses], nextExpId: id + 1 };
       persistAll(newState);
+      if (cloudUid) addLedgerEntry(cloudUid, 'expense', newExp);
       return newState;
     });
-  }, [persistAll]);
+  }, [persistAll, cloudUid]);
 
   const addClient = useCallback((cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>) => {
     setState(s => {
