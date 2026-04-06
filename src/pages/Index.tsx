@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { AppProvider, useApp } from '@/contexts/AppContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import Onboarding from '@/components/Onboarding';
 import AutoLock from '@/components/AutoLock';
+import AuthPage from '@/pages/Auth';
 import DashboardView from '@/pages/Dashboard';
 import InvoicesView from '@/pages/Invoices';
 import ExpensesView from '@/pages/Expenses';
@@ -44,10 +46,32 @@ function AppContent() {
   );
 }
 
-export default function Index() {
+function AuthGate() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="onboarding-overlay">
+        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-[14px]">
+          LX
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <AuthPage />;
+
   return (
-    <AppProvider>
+    <AppProvider cloudUid={user.uid}>
       <AppContent />
     </AppProvider>
+  );
+}
+
+export default function Index() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }
