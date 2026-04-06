@@ -39,7 +39,8 @@ export async function fetchCloudData(uid: string): Promise<CloudData | null> {
       nextClientId: data.nextClientId ?? 1,
       nextVendorId: data.nextVendorId ?? 1,
     };
-  } catch {
+  } catch (err) {
+    console.error('[LedgerX] Failed to fetch cloud data:', err);
     return null;
   }
 }
@@ -47,7 +48,8 @@ export async function fetchCloudData(uid: string): Promise<CloudData | null> {
 export async function saveCloudData(uid: string, data: CloudData): Promise<void> {
   try {
     await setDoc(userDoc(uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
-  } catch {
-    // silently fail – local data is the source of truth when offline
+  } catch (err) {
+    // Silently continue – local data is the source of truth when offline.
+    console.error('[LedgerX] Failed to save cloud data:', err);
   }
 }

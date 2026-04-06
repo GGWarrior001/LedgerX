@@ -15,5 +15,12 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
+if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
+  console.warn(
+    '[LedgerX] Firebase is not configured. ' +
+    'Set the VITE_FIREBASE_* environment variables to enable authentication and cloud sync.'
+  );
+}
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);

@@ -151,10 +151,10 @@ export function AppProvider({ children, cloudUid }: { children: React.ReactNode;
   }, [persist, cloudPersist, cloudUid]);
 
   // Fetch cloud data when a user signs in (cloudUid becomes non-null)
-  const cloudUidRef = useRef<string | null | undefined>(undefined);
+  const prevCloudUidRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (cloudUid === cloudUidRef.current) return;
-    cloudUidRef.current = cloudUid;
+    if (cloudUid === prevCloudUidRef.current) return;
+    prevCloudUidRef.current = cloudUid;
     if (!cloudUid) return;
     fetchCloudData(cloudUid).then(cloud => {
       if (!cloud) return;
@@ -176,6 +176,8 @@ export function AppProvider({ children, cloudUid }: { children: React.ReactNode;
         if (cloud.profile) storage.save('lx_profile', cloud.profile);
         return newState;
       });
+    }).catch(err => {
+      console.error('[LedgerX] Cloud sync error:', err);
     });
   }, [cloudUid, persist]);
 
