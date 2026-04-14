@@ -32,7 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Keep the user signed in across app restarts (uses localStorage internally)
-    setPersistence(auth, browserLocalPersistence).catch(() => {});
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn('[LedgerX] Failed to set auth persistence:', err);
+    });
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
