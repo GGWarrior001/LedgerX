@@ -1,63 +1,36 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  User,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  browserLocalPersistence,
-  setPersistence,
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+/**
+ * AuthContext – backward-compatible facade over the Zustand auth store.
+ *
+ * `AuthProvider` is now a no-op: Firebase auth state lives in `useAuthStore`
+ * and the listener is attached by AppShell.
+ * `useAuth()` reads from `useAuthStore` and delegates to `authService`.
+ */
+import React from 'react';
+import type { User } from 'firebase/auth';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { authService }  from '@/features/auth/services/authService';
 
 interface AuthContextType {
-  user: User | null;
+  user:    User | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  logOut: () => Promise<void>;
+  signUp:  (email: string, password: string) => Promise<void>;
+  signIn:  (email: string, password: string) => Promise<void>;
+  logOut:  () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function useAuth(): AuthContextType {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-}
-
+/** No-op provider – auth state lives in useAuthStore. */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  return <>{children}</>;
+}
 
-  useEffect(() => {
-    // Keep the user signed in across app restarts (uses localStorage internally)
-    setPersistence(auth, browserLocalPersistence).catch((err) => {
-      console.warn('[LedgerX] Failed to set auth persistence:', err);
-    });
-
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+/** Drop-in replacement for the old `useAuth()` hook. */
+export function useAuth(): AuthContextType {
+  const { user, loading } = useAuthStore();
+  return {
+    user,
+    loading,
+    signIn:  authService.signIn.bind(authService),
+    signUp:  authService.signUp.bind(authService),
+    logOut:  authService.logOut.bind(authService),
   };
-
-  const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const logOut = async () => {
-    await signOut(auth);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, logOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
 }
