@@ -42,6 +42,8 @@ function buildNotifications(invoices: Invoice[]): Notification[] {
     });
   });
   invoices.filter(i => i.status === 'sent').forEach(i => {
+    // Offset by 1000 to avoid collision with overdue IDs (inherited from v1 schema).
+    // Safe as long as total invoices stay well below 1000; invoice IDs are sequential.
     notifs.push({
       id: i.id + 1000,
       title: 'Payment Pending',

@@ -17,7 +17,7 @@ export default function ClientsView() {
     <div>
       <div className="flex items-end justify-between mb-5">
         <div>
-          <div className="text-xl font-bold tracking-tight">Clients & Vendors</div>
+          <div className="text-xl font-bold tracking-tight">Clients</div>
           <div className="text-[13px] text-muted-foreground mt-0.5">Manage contacts and relationships</div>
         </div>
         <button

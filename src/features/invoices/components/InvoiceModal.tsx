@@ -26,7 +26,7 @@ export default function InvoiceModal({ onClose }: Props) {
       issueDate:   fd.get('issueDate')   as string,
       dueDate:     fd.get('dueDate')     as string,
       status:      fd.get('status')      as 'draft' | 'sent',
-      amount:      Math.round(amount),
+      amount:      amount,
     });
     onClose();
   };

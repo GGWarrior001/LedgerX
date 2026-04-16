@@ -145,7 +145,7 @@ export default function AppShell() {
     }).catch(err => {
       console.error('[LedgerX] Cloud sync error:', err);
     });
-  }, [user]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]);   // store hydrate functions are stable Zustand refs; user.uid is the only meaningful dep
 
   // Auth loading splash
   if (loading) {

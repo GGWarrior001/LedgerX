@@ -8,6 +8,7 @@
  *   - importData  – bulk-import from a JSON backup file
  */
 import { storage } from '@/lib/storage';
+import { STORAGE_KEYS } from '../services/storageService';
 import {
   DEFAULT_INVOICES,
   DEFAULT_EXPENSES,
@@ -43,10 +44,9 @@ export const dataService = {
 
   /** Removes all domain keys from localStorage and resets stores to empty. */
   loadFreshData(): void {
-    [
-      'lx_invoices','lx_expenses','lx_clients','lx_vendors',
-      'lx_notifs','lx_inv_id','lx_exp_id','lx_cli_id','lx_ven_id',
-    ].forEach(k => storage.remove(k));
+    Object.values(STORAGE_KEYS)
+      .filter(k => k !== STORAGE_KEYS.PROFILE && k !== STORAGE_KEYS.DARK && k !== STORAGE_KEYS.SETTINGS)
+      .forEach(k => storage.remove(k));
     useInvoiceStore.getState().hydrate([], 1);
     useExpenseStore.getState().hydrate([], 1);
     useClientStore.getState().hydrate([], 1);

@@ -24,7 +24,7 @@ export default function ExpenseModal({ onClose }: Props) {
       category: fd.get('category') as string,
       date:     fd.get('date')     as string,
       receipt:  fd.get('receipt')  as 'attached' | 'pending',
-      amount:   Math.round(amount),
+      amount:   amount,
     });
     onClose();
   };
