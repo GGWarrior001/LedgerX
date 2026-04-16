@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { authService } from '../services/authService';
+import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
 
 type Mode = 'sign-in' | 'sign-up';
@@ -23,32 +24,53 @@ export default function AuthPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
+  const { setError } = useAuthStore();
 
   const toggle = () => {
     setMode(m => (m === 'sign-in' ? 'sign-up' : 'sign-in'));
     setEmail('');
     setPassword('');
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
+
+    // Validate before touching loading state so the button is never stuck
+    if (mode === 'sign-up' && password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+    console.log('[LedgerX] AuthPage – handleSubmit, mode:', mode);
+
     try {
       if (mode === 'sign-in') {
-        await authService.signIn(email.trim(), password);
-        toast.success('Welcome back!');
-      } else {
-        if (password.length < 6) {
-          toast.error('Password must be at least 6 characters');
-          return;
+        const result = await authService.signIn(email.trim(), password);
+        if (result.success) {
+          console.log('[LedgerX] AuthPage – signIn success, uid:', result.user?.uid);
+          toast.success('Welcome back!');
+        } else {
+          const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
+          console.warn('[LedgerX] AuthPage – signIn failed:', result.error);
+          setError(msg);
+          toast.error(msg);
         }
-        await authService.signUp(email.trim(), password);
-        toast.success('Account created! Welcome to LedgerX');
+      } else {
+        const result = await authService.signUp(email.trim(), password);
+        if (result.success) {
+          console.log('[LedgerX] AuthPage – signUp success, uid:', result.user?.uid);
+          toast.success('Account created! Welcome to LedgerX');
+        } else {
+          const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
+          console.warn('[LedgerX] AuthPage – signUp failed:', result.error);
+          setError(msg);
+          toast.error(msg);
+        }
       }
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? '';
-      toast.error(ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
