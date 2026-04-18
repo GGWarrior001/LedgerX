@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAppStore } from '@/shared/stores/useAppStore';
 
 export default function AutoLock() {
-  const { unlock } = useApp();
+  const unlock = useAppStore(s => s.unlock);
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState(false);
 

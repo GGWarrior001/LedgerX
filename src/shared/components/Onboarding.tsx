@@ -1,9 +1,14 @@
 import { useState, useRef } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/lib/constants';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useClientStore } from '@/features/clients/store/useClientStore';
+import { useVendorStore } from '@/features/vendors/store/useVendorStore';
+import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/shared/utils/constants';
+import type { Invoice, Expense, Client, Vendor, Profile } from '@/shared/types';
 
 export default function Onboarding() {
-  const { setProfile, loadFreshData, importData } = useApp();
+  const { setProfile } = useAppStore();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -28,7 +33,15 @@ export default function Onboarding() {
         if (!data || typeof data !== 'object') throw new Error('Invalid');
         const p = { name: name.trim(), role: role.trim() || 'Admin', city: city.trim(), businessName: biz.trim(), fiscalYear: fy, currency, dataChoice: 'import' };
         setProfile(p);
-        importData(data);
+        // Import into domain stores
+        if (Array.isArray(data.invoices)) useInvoiceStore.getState().setInvoices(data.invoices as Invoice[]);
+        if (Array.isArray(data.expenses)) useExpenseStore.getState().setExpenses(data.expenses as Expense[]);
+        if (Array.isArray(data.clients)) useClientStore.getState().setClients(data.clients as Client[]);
+        if (Array.isArray(data.vendors)) useVendorStore.getState().setVendors(data.vendors as Vendor[]);
+        if (data.profile && typeof data.profile === 'object') {
+          const importedProfile = data.profile as Profile;
+          setProfile({ ...p, ...importedProfile });
+        }
       } catch {
         alert('Failed to import: Invalid JSON file.');
       }
@@ -39,7 +52,13 @@ export default function Onboarding() {
   const finish = (choice: 'fresh') => {
     const p = { name: name.trim(), role: role.trim() || 'Admin', city: city.trim(), businessName: biz.trim(), fiscalYear: fy, currency, dataChoice: choice };
     setProfile(p);
-    if (choice === 'fresh') loadFreshData();
+    if (choice === 'fresh') {
+      // Clear stores for a fresh start
+      useInvoiceStore.getState().reset();
+      useExpenseStore.getState().reset();
+      useClientStore.getState().reset();
+      useVendorStore.getState().reset();
+    }
   };
 
   return (
