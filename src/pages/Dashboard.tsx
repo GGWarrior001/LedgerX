@@ -1,5 +1,10 @@
 import { useApp } from '@/contexts/AppContext';
 import { fmt, fmtDate, getGreeting, EXPENSE_CATEGORIES } from '@/lib/constants';
+import type { Expense, Invoice } from '@/lib/types';
+
+type RecentInvoice = Invoice & { _type: 'invoice'; _date: Date };
+type RecentExpense = Expense & { _type: 'expense'; _date: Date };
+type RecentTransaction = RecentInvoice | RecentExpense;
 
 export default function DashboardView() {
   const { invoices, expenses, cs, profile, privacyMode, setActiveView } = useApp();
@@ -22,7 +27,7 @@ export default function DashboardView() {
   const greeting = getGreeting(firstName);
 
   // Recent transactions
-  const txns = [
+  const txns: RecentTransaction[] = [
     ...invoices.map(i => ({ ...i, _type: 'invoice' as const, _date: new Date(i.issueDate || 0) })),
     ...expenses.map(e => ({ ...e, _type: 'expense' as const, _date: new Date(e.date || 0) })),
   ].sort((a, b) => b._date.getTime() - a._date.getTime()).slice(0, 6);
@@ -187,10 +192,10 @@ export default function DashboardView() {
                 <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">No transactions yet</td></tr>
               ) : txns.map((t, i) => {
                 const isInv = t._type === 'invoice';
-                const name = isInv ? (t as any).clientName : ((t as any).vendor || (t as any).description);
-                const ini = isInv ? (t as any).clientInitials : name?.split(/\s+/).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join('');
-                const col = isInv ? ((t as any).clientColor || '#6366F1') : '#F59E0B';
-                const status = isInv ? (t as any).status : 'paid';
+                const name = isInv ? t.clientName : (t.vendor || t.description);
+                const ini = isInv ? t.clientInitials : name?.split(/\s+/).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join('');
+                const col = isInv ? (t.clientColor || '#6366F1') : '#F59E0B';
+                const status = isInv ? t.status : 'paid';
                 const badgeClass = `badge-${status}`;
                 return (
                   <tr key={i}>
@@ -203,7 +208,7 @@ export default function DashboardView() {
                       </div>
                     </td>
                     <td className="text-muted-foreground text-xs">{isInv ? 'Invoice' : 'Expense'}</td>
-                    <td className="text-muted-foreground text-xs">{fmtDate(isInv ? (t as any).issueDate : (t as any).date)}</td>
+                    <td className="text-muted-foreground text-xs">{fmtDate(isInv ? t.issueDate : t.date)}</td>
                     <td><span className={`badge-status ${badgeClass}`}><span className="w-[5px] h-[5px] rounded-full" style={{ background: 'currentColor' }} />{status.charAt(0).toUpperCase() + status.slice(1)}</span></td>
                     <td className={`!text-right !pr-[18px] font-semibold tabular-nums ${isInv && status === 'paid' ? 'text-success' : !isInv || status === 'overdue' ? 'text-destructive' : ''}`}>
                       {privacyMode ? '***' : `${isInv ? (status === 'paid' ? '+' : status === 'overdue' ? '−' : '') : '−'}${cs}${fmt(t.amount)}`}

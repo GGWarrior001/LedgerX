@@ -2,16 +2,20 @@ import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmt, fmtDate } from '@/lib/constants';
 import InvoiceModal from '@/components/modals/InvoiceModal';
+import type { Invoice } from '@/lib/types';
+
+type InvoiceStatusFilter = Invoice['status'] | 'all';
+type InvoiceCounts = Record<InvoiceStatusFilter, number>;
 
 export default function InvoicesView() {
   const { invoices, cs, privacyMode } = useApp();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState<InvoiceStatusFilter>('all');
   const [showModal, setShowModal] = useState(false);
 
   const list = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
-  const counts = { all: invoices.length, draft: 0, sent: 0, paid: 0, overdue: 0 };
-  invoices.forEach(i => { if (i.status in counts) (counts as any)[i.status]++; });
-  const tabs = ['all', 'draft', 'sent', 'paid', 'overdue'];
+  const counts: InvoiceCounts = { all: invoices.length, draft: 0, sent: 0, paid: 0, overdue: 0 };
+  invoices.forEach(i => { counts[i.status] += 1; });
+  const tabs: InvoiceStatusFilter[] = ['all', 'draft', 'sent', 'paid', 'overdue'];
 
   return (
     <div>
@@ -35,7 +39,7 @@ export default function InvoicesView() {
             className={`px-3 py-1.5 rounded-md text-[12.5px] font-medium cursor-pointer transition-all ${filter === t ? 'bg-card font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={() => setFilter(t)}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)} ({(counts as any)[t]})
+            {t.charAt(0).toUpperCase() + t.slice(1)} ({counts[t]})
           </div>
         ))}
       </div>
