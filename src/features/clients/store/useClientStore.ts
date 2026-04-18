@@ -31,8 +31,17 @@ interface ClientStoreState {
     isOutstanding: boolean,
   ) => void;
 
-  hydrate: (clients: Client[], nextId: number) => void;
-  reset:   () => void;
+  /** Alias for updateClientStats — treats 'sent' and 'overdue' as outstanding. */
+  updateClientBilling: (
+    clientName: string,
+    amount:     number,
+    status:     string,
+  ) => void;
+
+  hydrate:    (clients: Client[], nextId: number) => void;
+  /** Alias for hydrate. */
+  setClients: (clients: Client[], nextId: number) => void;
+  reset:      () => void;
 }
 
 export const useClientStore = create<ClientStoreState>((set, get) => ({
@@ -75,7 +84,18 @@ export const useClientStore = create<ClientStoreState>((set, get) => ({
     });
   },
 
+  updateClientBilling: (clientName, amount, status) => {
+    const isOutstanding = status === 'sent' || status === 'overdue';
+    get().updateClientStats(clientName, amount, isOutstanding);
+  },
+
   hydrate: (clients, nextId) => {
+    set({ clients, nextClientId: nextId });
+    storage.save('lx_clients', clients);
+    storage.save('lx_cli_id', nextId);
+  },
+
+  setClients: (clients, nextId) => {
     set({ clients, nextClientId: nextId });
     storage.save('lx_clients', clients);
     storage.save('lx_cli_id', nextId);
