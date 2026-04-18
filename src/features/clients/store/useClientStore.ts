@@ -1,87 +1,89 @@
 /**
- * Client store — manages client CRUD and persistence.
+ * useClientStore – Zustand store for the Clients domain.
+ *
+ * Responsibilities:
+ *   - Persist client list and next-ID counter to localStorage
+ *   - Provide `addClient`, `hydrate` (cloud load), and `reset` actions
+ *   - Expose `updateClientStats` so the invoice service can keep
+ *     billed / outstanding figures in sync after an invoice is created
  */
 import { create } from 'zustand';
-import type { Client } from '@/shared/types';
-import { storage } from '@/shared/services/storageService';
-import { getInitials } from '@/shared/utils/format';
-import { CLIENT_COLORS } from '@/shared/utils/constants';
+import { storage } from '@/lib/storage';
+import { getInitials } from '@/lib/constants';
+import type { Client } from '@/lib/types';
 
-interface ClientState {
-  clients: Client[];
-  nextClientId: number;
+const COLORS = [
+  '#6366F1','#EC4899','#10B981','#F97316',
+  '#8B5CF6','#14B8A6','#F59E0B','#3B82F6',
+];
+
+interface ClientStoreState {
+  clients:       Client[];
+  nextClientId:  number;
+
+  addClient: (
+    cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>
+  ) => Client;
+
+  updateClientStats: (
+    clientName:    string,
+    amount:        number,
+    isOutstanding: boolean,
+  ) => void;
+
+  hydrate: (clients: Client[], nextId: number) => void;
+  reset:   () => void;
 }
 
-interface ClientActions {
-  hydrate: () => void;
-  addClient: (cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>) => Client;
-  setClients: (clients: Client[], nextId?: number) => void;
-  updateClientBilling: (clientName: string, amount: number, status: string) => void;
-  reset: () => void;
-  persist: () => void;
-}
-
-export const useClientStore = create<ClientState & ClientActions>()((set, get) => ({
-  clients: [],
-  nextClientId: 1,
-
-  hydrate: () => {
-    set({
-      clients: storage.load<Client[]>('lx_clients', []),
-      nextClientId: storage.load('lx_cli_id', 1),
-    });
-  },
+export const useClientStore = create<ClientStoreState>((set, get) => ({
+  clients:      storage.load<Client[]>('lx_clients', []),
+  nextClientId: storage.load<number>('lx_cli_id', 1),
 
   addClient: (cli) => {
-    const { nextClientId: id, clients } = get();
+    const { nextClientId, clients } = get();
+    const id = nextClientId;
     const newClient: Client = {
       ...cli,
       id,
-      initials: getInitials(cli.name),
-      color: CLIENT_COLORS[id % CLIENT_COLORS.length],
-      billed: 0,
+      initials:    getInitials(cli.name),
+      color:       COLORS[id % COLORS.length],
+      billed:      0,
       outstanding: 0,
-      invoices: 0,
+      invoices:    0,
     };
-    const updated = [...clients, newClient];
-    set({ clients: updated, nextClientId: id + 1 });
-    get().persist();
+    const newClients = [...clients, newClient];
+    const newId = id + 1;
+    set({ clients: newClients, nextClientId: newId });
+    storage.save('lx_clients', newClients);
+    storage.save('lx_cli_id', newId);
     return newClient;
   },
 
-  setClients: (clients, nextId) => {
-    set(s => ({
-      clients,
-      nextClientId: nextId ?? s.nextClientId,
-    }));
-    get().persist();
+  updateClientStats: (clientName, amount, isOutstanding) => {
+    set(s => {
+      const clients = s.clients.map(c => {
+        if (c.name !== clientName) return c;
+        return {
+          ...c,
+          billed:      c.billed + amount,
+          outstanding: isOutstanding ? c.outstanding + amount : c.outstanding,
+          invoices:    c.invoices + 1,
+        };
+      });
+      storage.save('lx_clients', clients);
+      return { clients };
+    });
   },
 
-  updateClientBilling: (clientName, amount, status) => {
-    set(s => ({
-      clients: s.clients.map(c => {
-        if (c.name === clientName) {
-          return {
-            ...c,
-            billed: c.billed + amount,
-            outstanding: status === 'sent' ? c.outstanding + amount : c.outstanding,
-            invoices: c.invoices + 1,
-          };
-        }
-        return c;
-      }),
-    }));
-    get().persist();
+  hydrate: (clients, nextId) => {
+    set({ clients, nextClientId: nextId });
+    storage.save('lx_clients', clients);
+    storage.save('lx_cli_id', nextId);
   },
 
   reset: () => {
     set({ clients: [], nextClientId: 1 });
-    get().persist();
-  },
-
-  persist: () => {
-    const { clients, nextClientId } = get();
-    storage.save('lx_clients', clients);
-    storage.save('lx_cli_id', nextClientId);
+    storage.save('lx_clients', []);
+    storage.save('lx_cli_id', 1);
   },
 }));

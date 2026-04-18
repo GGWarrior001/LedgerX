@@ -1,33 +1,53 @@
 /**
- * App-level UI store — dark mode, privacy, lock, notifications, and settings.
+ * useAppStore – shared UI & profile Zustand store.
  *
- * This replaces the UI-related parts of the old monolithic AppContext.
+ * Manages:
+ *   - User profile & business settings
+ *   - Active view / navigation state
+ *   - Dark mode & privacy mode
+ *   - App-lock state and encryption
+ *   - In-app notifications (derived from invoice statuses)
  */
 import { create } from 'zustand';
-import type { Profile, Notification, AppSettings, Invoice } from '@/shared/types';
-import { storage } from '@/shared/services/storageService';
-import { DEFAULT_PROFILE } from '@/shared/utils/constants';
-import { fmt } from '@/shared/utils/format';
+import { storage } from '@/lib/storage';
+import type { Profile, Notification, AppSettings, ViewId, Invoice } from '@/lib/types';
 
-// ─── Notification builder ────────────────────────────────────────────────────
+const DEFAULT_PROFILE: Profile = {
+  name: '',
+  role: 'Admin',
+  city: '',
+  businessName: 'LedgerX',
+  fiscalYear: 'Apr-Mar',
+  currency: '₹',
+  dataChoice: 'demo',
+};
 
-export function buildNotifications(invoices: Invoice[]): Notification[] {
+const DEFAULT_SETTINGS: AppSettings = {
+  sessionTimeout: 10,
+  privacyMode: false,
+  encryptionEnabled: false,
+};
+
+/** Derives overdue / pending notifications from the current invoice list. */
+function buildNotifications(invoices: Invoice[]): Notification[] {
   const notifs: Notification[] = [];
   invoices.filter(i => i.status === 'overdue').forEach(i => {
     const days = Math.round((Date.now() - new Date(i.dueDate).getTime()) / 86400000);
     notifs.push({
       id: i.id,
       title: `Invoice ${i.number} Overdue`,
-      sub: `${i.clientName} · ${days} day${days !== 1 ? 's' : ''} overdue · ₹${fmt(i.amount)}`,
+      sub: `${i.clientName} · ${days} day${days !== 1 ? 's' : ''} overdue`,
       read: false,
       type: 'danger',
     });
   });
   invoices.filter(i => i.status === 'sent').forEach(i => {
+    // Offset by 1000 to avoid collision with overdue IDs (inherited from v1 schema).
+    // Safe as long as total invoices stay well below 1000; invoice IDs are sequential.
     notifs.push({
       id: i.id + 1000,
       title: 'Payment Pending',
-      sub: `${i.clientName} · ${i.number} · ₹${fmt(i.amount)}`,
+      sub: `${i.clientName} · ${i.number}`,
       read: false,
       type: 'warning',
     });
@@ -35,63 +55,56 @@ export function buildNotifications(invoices: Invoice[]): Notification[] {
   return notifs;
 }
 
-// ─── State shape ─────────────────────────────────────────────────────────────
-
-interface AppUIState {
-  profile: Profile | null;
-  dark: boolean;
-  privacyMode: boolean;
-  locked: boolean;
+interface AppStoreState {
+  profile:       Profile | null;
+  dark:          boolean;
+  privacyMode:   boolean;
+  locked:        boolean;
+  activeView:    ViewId;
+  settings:      AppSettings;
   notifications: Notification[];
-  settings: AppSettings;
+
+  // Actions
+  setProfile:           (profile: Profile) => void;
+  saveSettings:         (partial: Partial<Profile>) => void;
+  setActiveView:        (view: ViewId) => void;
+  toggleTheme:          () => void;
+  togglePrivacy:        () => void;
+  lock:                 () => void;
+  unlock:               (passcode: string) => boolean;
+  setupEncryption:      (passcode: string) => void;
+  markNotifRead:        (id: number) => void;
+  markAllRead:          () => void;
+  setNotifications:     (notifs: Notification[]) => void;
+  rebuildNotifications: (invoices: Invoice[]) => void;
 }
 
-interface AppUIActions {
-  /** Hydrate from localStorage (call once on mount) */
-  hydrate: (invoices: Invoice[]) => void;
-  toggleTheme: () => void;
-  togglePrivacy: () => void;
-  setProfile: (p: Profile) => void;
-  saveSettings: (p: Partial<Profile>) => void;
-  markNotifRead: (id: number) => void;
-  markAllRead: () => void;
-  refreshNotifications: (invoices: Invoice[]) => void;
-  unlock: (passcode: string) => boolean;
-  setupEncryption: (passcode: string) => void;
-  setLocked: (locked: boolean) => void;
-  /** Currency symbol shorthand */
-  cs: () => string;
-}
+const initialDark = localStorage.getItem('lx_dark') === '1';
+if (initialDark) document.documentElement.classList.add('dark');
 
-export const useAppStore = create<AppUIState & AppUIActions>()((set, get) => ({
-  profile: null,
-  dark: false,
-  privacyMode: false,
-  locked: false,
-  notifications: [],
-  settings: { sessionTimeout: 10, privacyMode: false, encryptionEnabled: false },
+export const useAppStore = create<AppStoreState>((set) => ({
+  profile:       storage.load<Profile | null>('lx_profile', null),
+  dark:          initialDark,
+  privacyMode:   false,
+  locked:        storage.isEncryptionSetup() && !storage.isUnlocked(),
+  activeView:    'dashboard',
+  settings:      storage.load<AppSettings>('lx_settings', DEFAULT_SETTINGS),
+  notifications: storage.load<Notification[] | null>('lx_notifs', null) ?? [],
 
-  hydrate: (invoices) => {
-    const dark = localStorage.getItem('lx_dark') === '1';
-    const profile = storage.load<Profile | null>('lx_profile', null);
-    const notifications =
-      storage.load<Notification[] | null>('lx_notifs', null) ?? buildNotifications(invoices);
-    const settings = storage.load<AppSettings>('lx_settings', {
-      sessionTimeout: 10,
-      privacyMode: false,
-      encryptionEnabled: false,
-    });
+  setProfile: (profile) => {
+    storage.save('lx_profile', profile);
+    set({ profile });
+  },
 
-    if (dark) document.documentElement.classList.add('dark');
-
-    set({
-      profile,
-      dark,
-      notifications,
-      settings,
-      locked: storage.isEncryptionSetup() && !storage.isUnlocked(),
+  saveSettings: (partial) => {
+    set(s => {
+      const profile = { ...(s.profile ?? DEFAULT_PROFILE), ...partial };
+      storage.save('lx_profile', profile);
+      return { profile };
     });
   },
+
+  setActiveView: (activeView) => set({ activeView }),
 
   toggleTheme: () => {
     set(s => {
@@ -104,22 +117,22 @@ export const useAppStore = create<AppUIState & AppUIActions>()((set, get) => ({
 
   togglePrivacy: () => set(s => ({ privacyMode: !s.privacyMode })),
 
-  setProfile: (p) => {
-    storage.save('lx_profile', p);
-    set({ profile: p });
+  lock: () => set({ locked: true }),
+
+  unlock: (passcode) => {
+    const ok = storage.unlock(passcode);
+    if (ok) set({ locked: false });
+    return ok;
   },
 
-  saveSettings: (p) => {
-    set(s => {
-      const profile = { ...(s.profile || DEFAULT_PROFILE), ...p };
-      storage.save('lx_profile', profile);
-      return { profile };
-    });
+  setupEncryption: (passcode) => {
+    storage.setupEncryption(passcode);
+    set(s => ({ settings: { ...s.settings, encryptionEnabled: true } }));
   },
 
   markNotifRead: (id) => {
     set(s => {
-      const notifications = s.notifications.map(n => (n.id === id ? { ...n, read: true } : n));
+      const notifications = s.notifications.map(n => n.id === id ? { ...n, read: true } : n);
       storage.save('lx_notifs', notifications);
       return { notifications };
     });
@@ -133,22 +146,14 @@ export const useAppStore = create<AppUIState & AppUIActions>()((set, get) => ({
     });
   },
 
-  refreshNotifications: (invoices) => {
-    set({ notifications: buildNotifications(invoices) });
+  setNotifications: (notifications) => {
+    storage.save('lx_notifs', notifications);
+    set({ notifications });
   },
 
-  unlock: (passcode) => {
-    const ok = storage.unlock(passcode);
-    if (ok) set({ locked: false });
-    return ok;
+  rebuildNotifications: (invoices) => {
+    const notifications = buildNotifications(invoices);
+    storage.save('lx_notifs', notifications);
+    set({ notifications });
   },
-
-  setupEncryption: (passcode) => {
-    storage.setupEncryption(passcode);
-    set(s => ({ settings: { ...s.settings, encryptionEnabled: true } }));
-  },
-
-  setLocked: (locked) => set({ locked }),
-
-  cs: () => get().profile?.currency || '₹',
 }));

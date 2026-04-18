@@ -1,67 +1,59 @@
 /**
- * Vendor store — manages vendor CRUD and persistence.
+ * useVendorStore – Zustand store for the Vendors domain.
  */
 import { create } from 'zustand';
-import type { Vendor } from '@/shared/types';
-import { storage } from '@/shared/services/storageService';
-import { getInitials } from '@/shared/utils/format';
-import { VENDOR_COLORS } from '@/shared/utils/constants';
+import { storage } from '@/lib/storage';
+import { getInitials } from '@/lib/constants';
+import type { Vendor } from '@/lib/types';
 
-interface VendorState {
-  vendors: Vendor[];
+const COLORS = [
+  '#F59E0B','#10B981','#8B5CF6',
+  '#3B82F6','#EC4899','#6366F1',
+];
+
+interface VendorStoreState {
+  vendors:      Vendor[];
   nextVendorId: number;
+
+  addVendor: (
+    ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>
+  ) => Vendor;
+
+  hydrate: (vendors: Vendor[], nextId: number) => void;
+  reset:   () => void;
 }
 
-interface VendorActions {
-  hydrate: () => void;
-  addVendor: (ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>) => Vendor;
-  setVendors: (vendors: Vendor[], nextId?: number) => void;
-  reset: () => void;
-  persist: () => void;
-}
-
-export const useVendorStore = create<VendorState & VendorActions>()((set, get) => ({
-  vendors: [],
-  nextVendorId: 1,
-
-  hydrate: () => {
-    set({
-      vendors: storage.load<Vendor[]>('lx_vendors', []),
-      nextVendorId: storage.load('lx_ven_id', 1),
-    });
-  },
+export const useVendorStore = create<VendorStoreState>((set, get) => ({
+  vendors:      storage.load<Vendor[]>('lx_vendors', []),
+  nextVendorId: storage.load<number>('lx_ven_id', 1),
 
   addVendor: (ven) => {
-    const { nextVendorId: id, vendors } = get();
+    const { nextVendorId, vendors } = get();
+    const id = nextVendorId;
     const newVendor: Vendor = {
       ...ven,
       id,
-      initials: getInitials(ven.name),
-      color: VENDOR_COLORS[id % VENDOR_COLORS.length],
+      initials:   getInitials(ven.name),
+      color:      COLORS[id % COLORS.length],
       totalSpent: 0,
     };
-
-    set({ vendors: [...vendors, newVendor], nextVendorId: id + 1 });
-    get().persist();
+    const newVendors = [...vendors, newVendor];
+    const newId = id + 1;
+    set({ vendors: newVendors, nextVendorId: newId });
+    storage.save('lx_vendors', newVendors);
+    storage.save('lx_ven_id', newId);
     return newVendor;
   },
 
-  setVendors: (vendors, nextId) => {
-    set(s => ({
-      vendors,
-      nextVendorId: nextId ?? s.nextVendorId,
-    }));
-    get().persist();
+  hydrate: (vendors, nextId) => {
+    set({ vendors, nextVendorId: nextId });
+    storage.save('lx_vendors', vendors);
+    storage.save('lx_ven_id', nextId);
   },
 
   reset: () => {
     set({ vendors: [], nextVendorId: 1 });
-    get().persist();
-  },
-
-  persist: () => {
-    const { vendors, nextVendorId } = get();
-    storage.save('lx_vendors', vendors);
-    storage.save('lx_ven_id', nextVendorId);
+    storage.save('lx_vendors', []);
+    storage.save('lx_ven_id', 1);
   },
 }));

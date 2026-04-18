@@ -1,59 +1,44 @@
 /**
- * Expense store — manages expense CRUD and persistence.
+ * useExpenseStore – Zustand store for the Expenses domain.
  */
 import { create } from 'zustand';
-import type { Expense } from '@/shared/types';
-import { storage } from '@/shared/services/storageService';
+import { storage } from '@/lib/storage';
+import type { Expense } from '@/lib/types';
 
-interface ExpenseState {
-  expenses: Expense[];
+interface ExpenseStoreState {
+  expenses:  Expense[];
   nextExpId: number;
-}
 
-interface ExpenseActions {
-  hydrate: () => void;
   addExpense: (exp: Omit<Expense, 'id'>) => Expense;
-  setExpenses: (expenses: Expense[], nextId?: number) => void;
-  reset: () => void;
-  persist: () => void;
+  hydrate:    (expenses: Expense[], nextId: number) => void;
+  reset:      () => void;
 }
 
-export const useExpenseStore = create<ExpenseState & ExpenseActions>()((set, get) => ({
-  expenses: [],
-  nextExpId: 1,
-
-  hydrate: () => {
-    set({
-      expenses: storage.load<Expense[]>('lx_expenses', []),
-      nextExpId: storage.load('lx_exp_id', 1),
-    });
-  },
+export const useExpenseStore = create<ExpenseStoreState>((set, get) => ({
+  expenses:  storage.load<Expense[]>('lx_expenses', []),
+  nextExpId: storage.load<number>('lx_exp_id', 1),
 
   addExpense: (exp) => {
-    const { nextExpId: id, expenses } = get();
-    const newExp: Expense = { ...exp, id };
-
-    set({ expenses: [newExp, ...expenses], nextExpId: id + 1 });
-    get().persist();
+    const { nextExpId, expenses } = get();
+    const id     = nextExpId;
+    const newExp = { ...exp, id };
+    const newExpenses = [newExp, ...expenses];
+    const newId = id + 1;
+    set({ expenses: newExpenses, nextExpId: newId });
+    storage.save('lx_expenses', newExpenses);
+    storage.save('lx_exp_id', newId);
     return newExp;
   },
 
-  setExpenses: (expenses, nextId) => {
-    set(s => ({
-      expenses,
-      nextExpId: nextId ?? s.nextExpId,
-    }));
-    get().persist();
+  hydrate: (expenses, nextId) => {
+    set({ expenses, nextExpId: nextId });
+    storage.save('lx_expenses', expenses);
+    storage.save('lx_exp_id', nextId);
   },
 
   reset: () => {
     set({ expenses: [], nextExpId: 1 });
-    get().persist();
-  },
-
-  persist: () => {
-    const { expenses, nextExpId } = get();
-    storage.save('lx_expenses', expenses);
-    storage.save('lx_exp_id', nextExpId);
+    storage.save('lx_expenses', []);
+    storage.save('lx_exp_id', 1);
   },
 }));

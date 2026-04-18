@@ -1,101 +1,153 @@
 /**
- * App shell — orchestrates auth, hydration, cloud sync, and routing.
+ * AppShell – the main application shell.
  *
- * This replaces the old Index.tsx + App.tsx + context wiring.
+ * Responsibilities:
+ *   1. Initialize the Firebase auth listener (once on mount)
+ *   2. Cloud-sync: fetch cloud data when the user signs in and hydrate
+ *      the domain Zustand stores
+ *   3. Auto-lock: start an inactivity timer when encryption is enabled
+ *   4. Route to the correct view based on auth & profile state:
+ *        not-signed-in → AuthPage
+ *        signed-in, no profile → Onboarding
+ *        locked → AutoLock
+ *        default → main layout (Sidebar + Topbar + active view)
  */
-import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useAppStore } from '@/shared/stores/useAppStore';
-import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
-import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
-import { useClientStore } from '@/features/clients/store/useClientStore';
-import { useVendorStore } from '@/features/vendors/store/useVendorStore';
-import { useCloudSync } from '@/shared/hooks/useCloudSync';
-import type { ViewId } from '@/shared/types';
+import { useEffect, useRef, useState } from 'react';
+import { storage }           from '@/lib/storage';
+import { authService }       from '@/features/auth/services/authService';
+import { useAuthStore }      from '@/features/auth/store/useAuthStore';
+import { useAppStore }       from '@/shared/stores/useAppStore';
+import { useInvoiceStore }   from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore }   from '@/features/expenses/store/useExpenseStore';
+import { useClientStore }    from '@/features/clients/store/useClientStore';
+import { useVendorStore }    from '@/features/vendors/store/useVendorStore';
+import {
+  fetchCloudData,
+  fetchLedgerEntries,
+} from '@/shared/services/firestoreService';
 
-// Shared components
-import Sidebar from '@/shared/components/layout/Sidebar';
-import Topbar from '@/shared/components/layout/Topbar';
-import Onboarding from '@/shared/components/Onboarding';
-import AutoLock from '@/shared/components/AutoLock';
-import AuthPage from '@/features/auth/components/AuthPage';
+import Sidebar    from '@/components/layout/Sidebar';
+import Topbar     from '@/components/layout/Topbar';
+import AuthPage   from '@/features/auth/components/AuthPage';
+import Onboarding from '@/features/auth/components/Onboarding';
+import AutoLock   from '@/features/auth/components/AutoLock';
 
-// Feature pages
-import DashboardPage from '@/features/dashboard/components/DashboardPage';
-import InvoicesPage from '@/features/invoices/components/InvoicesPage';
-import ExpensesPage from '@/features/expenses/components/ExpensesPage';
-import ClientsPage from '@/features/clients/components/ClientsPage';
-import VendorsPage from '@/features/vendors/components/VendorsPage';
-import ReportsPage from '@/features/reports/components/ReportsPage';
-import LedgerPage from '@/features/ledger/components/LedgerPage';
-import SettingsPage from '@/features/settings/components/SettingsPage';
+import DashboardView from '@/features/dashboard/components/DashboardView';
+import InvoicesView  from '@/features/invoices/components/InvoicesView';
+import ExpensesView  from '@/features/expenses/components/ExpensesView';
+import ClientsView   from '@/features/clients/components/ClientsView';
+import VendorsView   from '@/features/vendors/components/VendorsView';
+import ReportsView   from '@/features/reports/components/ReportsView';
+import LedgerView    from '@/features/ledger/components/LedgerView';
+import SettingsView  from '@/features/settings/components/SettingsView';
 
-// ─── Inner app (authed + hydrated) ──────────────────────────────────────────
+import type { ViewId } from '@/lib/types';
+
+const VIEWS: Record<ViewId, React.ComponentType> = {
+  dashboard: DashboardView,
+  invoices:  InvoicesView,
+  expenses:  ExpensesView,
+  clients:   ClientsView,
+  vendors:   VendorsView,
+  reports:   ReportsView,
+  ledger:    LedgerView,
+  settings:  SettingsView,
+};
+
+// ── Inner component rendered after the user is authenticated ─────────────────
 
 function AppContent() {
-  const profile = useAppStore(s => s.profile);
-  const locked = useAppStore(s => s.locked);
-  const [activeView, setActiveView] = useState<ViewId>('dashboard');
+  const { activeView, locked, settings, lock } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Start cloud sync (pulls data on mount if signed in)
-  useCloudSync();
+  // Auto-lock on inactivity
+  const lastActivity = useRef(Date.now());
+  useEffect(() => {
+    if (!storage.isEncryptionSetup() || locked) return;
+
+    const timeout  = settings.sessionTimeout * 60 * 1000;
+    const onAction = () => { lastActivity.current = Date.now(); };
+    const events   = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
+
+    events.forEach(e => window.addEventListener(e, onAction));
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivity.current > timeout) lock();
+    }, 30_000);
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, onAction));
+      clearInterval(interval);
+    };
+  }, [locked, settings.sessionTimeout, lock]);
 
   if (locked) return <AutoLock />;
-  if (!profile) return <Onboarding />;
 
-  const views: Record<ViewId, React.ReactNode> = {
-    dashboard: <DashboardPage onNavigate={setActiveView} />,
-    invoices: <InvoicesPage />,
-    expenses: <ExpensesPage />,
-    clients: <ClientsPage />,
-    vendors: <VendorsPage />,
-    reports: <ReportsPage />,
-    ledger: <LedgerPage />,
-    settings: <SettingsPage />,
-  };
+  const ViewComponent = VIEWS[activeView] ?? DashboardView;
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        activeView={activeView}
-        onNavigate={setActiveView}
-        open={sidebarOpen}
-        onOpenChange={setSidebarOpen}
-      />
+      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <Topbar activeView={activeView} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="flex-1 overflow-y-auto p-3 md:p-6" style={{ scrollbarWidth: 'thin' }}>
-          {views[activeView] || <DashboardPage onNavigate={setActiveView} />}
+          <ViewComponent />
         </div>
       </main>
     </div>
   );
 }
 
-// ─── Auth gate ───────────────────────────────────────────────────────────────
+// ── Root shell ────────────────────────────────────────────────────────────────
 
-function AuthGate() {
-  const { user, loading } = useAuthStore();
-  const hydrate = useAppStore(s => s.hydrate);
-  const hydrateInvoices = useInvoiceStore(s => s.hydrate);
-  const hydrateExpenses = useExpenseStore(s => s.hydrate);
-  const hydrateClients = useClientStore(s => s.hydrate);
-  const hydrateVendors = useVendorStore(s => s.hydrate);
+export default function AppShell() {
+  const { user, loading }             = useAuthStore();
+  const { profile, setProfile }       = useAppStore();
+  const { hydrate: hydrateInvoices }  = useInvoiceStore();
+  const { hydrate: hydrateExpenses }  = useExpenseStore();
+  const { hydrate: hydrateClients }   = useClientStore();
+  const { hydrate: hydrateVendors }   = useVendorStore();
+  const { rebuildNotifications }      = useAppStore();
 
-  // Hydrate local stores once auth is resolved and user is available
+  // Attach the Firebase auth listener once
   useEffect(() => {
-    if (loading) return;
-    if (!user) return;
-    hydrateInvoices();
-    hydrateExpenses();
-    hydrateClients();
-    hydrateVendors();
-    // Hydrate app UI state (dark mode, profile, notifications)
-    const invoices = useInvoiceStore.getState().invoices;
-    hydrate(invoices);
-  }, [loading, user, hydrate, hydrateInvoices, hydrateExpenses, hydrateClients, hydrateVendors]);
+    const unsubscribe = authService.init();
+    return unsubscribe;
+  }, []);
 
+  // Cloud hydration whenever the user changes
+  const prevUid = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (user?.uid === prevUid.current) return;
+    prevUid.current = user?.uid ?? null;
+    if (!user) return;
+
+    Promise.all([
+      fetchCloudData(user.uid),
+      fetchLedgerEntries(user.uid),
+    ]).then(([cloud, ledger]) => {
+      // Prefer ledger entries (append-only) over snapshot when available
+      const hasLedger   = ledger.invoices.length > 0 || ledger.expenses.length > 0;
+      const cloudInvoices = hasLedger ? ledger.invoices : (cloud?.invoices ?? []);
+      const cloudExpenses = hasLedger ? ledger.expenses : (cloud?.expenses ?? []);
+
+      if (!cloud && !hasLedger) return;
+
+      hydrateInvoices(cloudInvoices, cloud?.nextInvId ?? cloudInvoices.length + 1);
+      hydrateExpenses(cloudExpenses, cloud?.nextExpId ?? cloudExpenses.length + 1);
+
+      if (cloud) {
+        hydrateClients(cloud.clients, cloud.nextClientId);
+        hydrateVendors(cloud.vendors, cloud.nextVendorId);
+        if (cloud.profile && !profile) setProfile(cloud.profile);
+      }
+
+      rebuildNotifications(cloudInvoices);
+    }).catch(err => {
+      console.error('[LedgerX] Cloud sync error:', err);
+    });
+  }, [user]);   // store hydrate functions are stable Zustand refs; user.uid is the only meaningful dep
+
+  // Auth loading splash
   if (loading) {
     return (
       <div className="onboarding-overlay">
@@ -106,21 +158,8 @@ function AuthGate() {
     );
   }
 
-  if (!user) return <AuthPage />;
+  if (!user)    return <AuthPage />;
+  if (!profile) return <Onboarding />;
 
   return <AppContent />;
-}
-
-// ─── Root ────────────────────────────────────────────────────────────────────
-
-export default function AppShell() {
-  const initAuth = useAuthStore(s => s.init);
-
-  // Subscribe to auth state on mount
-  useEffect(() => {
-    const unsubscribe = initAuth();
-    return unsubscribe;
-  }, [initAuth]);
-
-  return <AuthGate />;
 }
