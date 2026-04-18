@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { fmt, fmtDate } from '@/lib/constants';
-import InvoiceModal from '@/components/modals/InvoiceModal';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt, fmtDate } from '@/shared/utils/format';
+import InvoiceModal from './InvoiceModal';
 
-export default function InvoicesView() {
-  const { invoices, cs, privacyMode } = useApp();
+export default function InvoicesPage() {
+  const invoices = useInvoiceStore(s => s.invoices);
+  const cs = useAppStore(s => s.cs());
+  const privacyMode = useAppStore(s => s.privacyMode);
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
 

@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { fmt } from '@/lib/constants';
-import ClientModal from '@/components/modals/ClientModal';
+import { useClientStore } from '@/features/clients/store/useClientStore';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt } from '@/shared/utils/format';
+import ClientModal from './ClientModal';
 
-export default function ClientsView() {
-  const { clients, invoices, cs, privacyMode } = useApp();
+export default function ClientsPage() {
+  const clients = useClientStore(s => s.clients);
+  const invoices = useInvoiceStore(s => s.invoices);
+  const cs = useAppStore(s => s.cs());
+  const privacyMode = useAppStore(s => s.privacyMode);
   const [showModal, setShowModal] = useState(false);
 
   return (

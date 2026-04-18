@@ -1,8 +1,20 @@
-import { useApp } from '@/contexts/AppContext';
-import { fmt, fmtDate, getGreeting, EXPENSE_CATEGORIES } from '@/lib/constants';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt, fmtDate, getGreeting } from '@/shared/utils/format';
+import { EXPENSE_CATEGORIES } from '@/shared/utils/constants';
+import type { ViewId } from '@/shared/types';
 
-export default function DashboardView() {
-  const { invoices, expenses, cs, profile, privacyMode, setActiveView } = useApp();
+interface Props {
+  onNavigate: (view: ViewId) => void;
+}
+
+export default function DashboardPage({ onNavigate }: Props) {
+  const invoices = useInvoiceStore(s => s.invoices);
+  const expenses = useExpenseStore(s => s.expenses);
+  const cs = useAppStore(s => s.cs());
+  const profile = useAppStore(s => s.profile);
+  const privacyMode = useAppStore(s => s.privacyMode);
 
   const rev = invoices.filter(i => i.status === 'paid').reduce((a, i) => a + i.amount, 0);
   const exp = expenses.reduce((a, e) => a + e.amount, 0);
@@ -53,7 +65,7 @@ export default function DashboardView() {
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/><path d="M7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/></svg>
             Export
           </button>
-          <button onClick={() => setActiveView('invoices')} className="inline-flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity">
+          <button onClick={() => onNavigate('invoices')} className="inline-flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a.5.5 0 01.5.5v3h3a.5.5 0 010 1h-3v3a.5.5 0 01-1 0v-3h-3a.5.5 0 010-1h3v-3A.5.5 0 018 4z"/></svg>
             New Invoice
           </button>
@@ -123,7 +135,6 @@ export default function DashboardView() {
               const mo = d.getMonth(); const yr = d.getFullYear();
               const r = invoices.filter(inv => inv.status === 'paid' && new Date(inv.issueDate).getMonth() === mo && new Date(inv.issueDate).getFullYear() === yr).reduce((a, inv) => a + inv.amount, 0);
               const e = expenses.filter(ex => new Date(ex.date).getMonth() === mo && new Date(ex.date).getFullYear() === yr).reduce((a, ex) => a + ex.amount, 0);
-              const max = Math.max(r, e, 1);
               const scale = 160 / Math.max(...Array.from({ length: 6 }).map((_, j) => {
                 const dd = new Date(); dd.setDate(1); dd.setMonth(dd.getMonth() - (5 - j));
                 const mm = dd.getMonth(); const yy = dd.getFullYear();

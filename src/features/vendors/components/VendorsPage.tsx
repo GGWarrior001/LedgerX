@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { fmt } from '@/lib/constants';
-import VendorModal from '@/components/modals/VendorModal';
+import { useVendorStore } from '@/features/vendors/store/useVendorStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt } from '@/shared/utils/format';
+import VendorModal from './VendorModal';
 
-export default function VendorsView() {
-  const { vendors, cs, privacyMode } = useApp();
+export default function VendorsPage() {
+  const vendors = useVendorStore(s => s.vendors);
+  const cs = useAppStore(s => s.cs());
+  const privacyMode = useAppStore(s => s.privacyMode);
   const [showModal, setShowModal] = useState(false);
 
   return (

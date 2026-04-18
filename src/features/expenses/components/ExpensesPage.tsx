@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { fmt, fmtDate, EXPENSE_CATEGORIES } from '@/lib/constants';
-import ExpenseModal from '@/components/modals/ExpenseModal';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt, fmtDate } from '@/shared/utils/format';
+import { EXPENSE_CATEGORIES } from '@/shared/utils/constants';
+import ExpenseModal from './ExpenseModal';
 
-export default function ExpensesView() {
-  const { expenses, cs, privacyMode } = useApp();
+export default function ExpensesPage() {
+  const expenses = useExpenseStore(s => s.expenses);
+  const cs = useAppStore(s => s.cs());
+  const privacyMode = useAppStore(s => s.privacyMode);
   const [showModal, setShowModal] = useState(false);
 
   const catTotals: Record<string, number> = {};

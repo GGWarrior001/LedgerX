@@ -1,8 +1,14 @@
-import { useApp } from '@/contexts/AppContext';
-import { fmt, currentFY } from '@/lib/constants';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt, currentFY } from '@/shared/utils/format';
 
-export default function ReportsView() {
-  const { invoices, expenses, cs, profile, privacyMode } = useApp();
+export default function ReportsPage() {
+  const invoices = useInvoiceStore(s => s.invoices);
+  const expenses = useExpenseStore(s => s.expenses);
+  const cs = useAppStore(s => s.cs());
+  const profile = useAppStore(s => s.profile);
+  const privacyMode = useAppStore(s => s.privacyMode);
 
   const fyPref = profile?.fiscalYear || 'Apr-Mar';
   const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((a, i) => a + i.amount, 0);

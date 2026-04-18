@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/lib/constants';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useClientStore } from '@/features/clients/store/useClientStore';
+import { useVendorStore } from '@/features/vendors/store/useVendorStore';
+import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/shared/utils/constants';
+import { storage } from '@/shared/services/storageService';
 import { toast } from 'sonner';
 
-export default function SettingsView() {
-  const { profile, saveSettings, resetData, setupEncryption } = useApp();
-  const { user, logOut } = useAuth();
+export default function SettingsPage() {
+  const { profile, saveSettings, setupEncryption } = useAppStore();
+  const user = useAuthStore(s => s.user);
+  const logOut = useAuthStore(s => s.logOut);
   const p = profile || { name: '', role: 'Admin', city: '', businessName: 'LedgerX', fiscalYear: 'Apr-Mar', currency: '₹', dataChoice: '' };
 
   const [name, setName] = useState(p.name);
@@ -24,7 +30,11 @@ export default function SettingsView() {
 
   const handleReset = () => {
     if (!confirm('Are you sure you want to reset ALL application data? This will delete all invoices, expenses, clients, vendors, and notifications. Your profile settings will be preserved. This action cannot be undone.')) return;
-    resetData();
+    storage.clearAppData();
+    useInvoiceStore.getState().reset();
+    useExpenseStore.getState().reset();
+    useClientStore.getState().reset();
+    useVendorStore.getState().reset();
     toast.success('Application data has been reset');
   };
 
@@ -47,11 +57,11 @@ export default function SettingsView() {
 
   const exportData = () => {
     const data = {
-      invoices: JSON.parse(localStorage.getItem('lx_invoices') || '[]'),
-      expenses: JSON.parse(localStorage.getItem('lx_expenses') || '[]'),
-      clients: JSON.parse(localStorage.getItem('lx_clients') || '[]'),
-      vendors: JSON.parse(localStorage.getItem('lx_vendors') || '[]'),
-      profile: JSON.parse(localStorage.getItem('lx_profile') || '{}'),
+      invoices: useInvoiceStore.getState().invoices,
+      expenses: useExpenseStore.getState().expenses,
+      clients: useClientStore.getState().clients,
+      vendors: useVendorStore.getState().vendors,
+      profile,
     };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));

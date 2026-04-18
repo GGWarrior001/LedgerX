@@ -1,8 +1,13 @@
-import { useApp } from '@/contexts/AppContext';
-import { fmt } from '@/lib/constants';
+import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { fmt } from '@/shared/utils/format';
 
-export default function LedgerView() {
-  const { invoices, expenses, cs, privacyMode } = useApp();
+export default function LedgerPage() {
+  const invoices = useInvoiceStore(s => s.invoices);
+  const expenses = useExpenseStore(s => s.expenses);
+  const cs = useAppStore(s => s.cs());
+  const privacyMode = useAppStore(s => s.privacyMode);
 
   const totalPaid = invoices.filter(i => i.status === 'paid').reduce((a, i) => a + i.amount, 0);
   const totalExp = expenses.reduce((a, e) => a + e.amount, 0);
