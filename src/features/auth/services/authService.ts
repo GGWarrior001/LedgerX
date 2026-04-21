@@ -58,6 +58,7 @@ export const authService = {
     });
 
     return onAuthStateChanged(auth, (user) => {
+      if (!user) useAuthStore.getState().initializeGuestSession();
       useAuthStore.getState().setUser(user);
       useAuthStore.getState().setLoading(false);
     });

@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "android:release": "./scripts/build-android-release.sh",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

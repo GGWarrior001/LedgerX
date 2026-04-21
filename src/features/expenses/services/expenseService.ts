@@ -27,9 +27,14 @@ function pushCloudSnapshot(uid: string): void {
 
 export const expenseService = {
   addExpense(exp: Omit<Expense, 'id'>): Expense {
-    const newExp = useExpenseStore.getState().addExpense(exp);
+    const auth = useAuthStore.getState();
+    const ownerId = auth.user?.uid ?? auth.localUser?.id ?? 'local';
+    const newExp = useExpenseStore.getState().addExpense({
+      ...exp,
+      user_id: ownerId,
+    });
 
-    const uid = useAuthStore.getState().user?.uid;
+    const uid = auth.user?.uid;
     if (uid) {
       addLedgerEntry(uid, 'expense', newExp).catch(() => {});
       pushCloudSnapshot(uid);

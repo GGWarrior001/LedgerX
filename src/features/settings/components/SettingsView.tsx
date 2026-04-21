@@ -11,6 +11,8 @@ export default function SettingsView() {
   const saveSettings    = useAppStore(s => s.saveSettings);
   const setupEncryption = useAppStore(s => s.setupEncryption);
   const user            = useAuthStore(s => s.user);
+  const localUser       = useAuthStore(s => s.localUser);
+  const openAuthModal   = useAuthStore(s => s.openAuthModal);
 
   const p = profile ?? {
     name: '', role: 'Admin', city: '', businessName: 'LedgerX',
@@ -195,9 +197,9 @@ export default function SettingsView() {
       </div>
 
       {/* Account */}
-      {user && (
-        <div className="bg-card border border-border rounded-xl p-5 mb-4">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account</div>
+      <div className="bg-card border border-border rounded-xl p-5 mb-4">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Sync Account</div>
+        {user ? (
           <div className="grid grid-cols-[180px_1fr] items-center gap-3.5 py-3">
             <div>
               <label className="text-[13px] font-medium">Signed in as</label>
@@ -210,8 +212,32 @@ export default function SettingsView() {
               Sign Out
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div
+            className="rounded-xl p-4"
+            style={{ background: 'hsl(var(--primary) / 0.06)', border: '1px solid hsl(var(--primary) / 0.14)' }}
+          >
+            <div className="text-[13px] font-semibold mb-1.5">Login to use cloud sync</div>
+            <div className="text-[12px] text-muted-foreground mb-3.5">
+              You are using LedgerX as {localUser?.name ?? 'Guest'}. Your expenses are being stored locally on this device.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => openAuthModal('sign-in')}
+                className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => openAuthModal('sign-up')}
+                className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-background border border-border cursor-pointer hover:bg-muted transition-colors"
+              >
+                Create Account
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Danger Zone */}
       <div className="bg-card border border-border rounded-xl p-5">

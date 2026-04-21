@@ -3,8 +3,6 @@ import { authService } from '../services/authService';
 import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
 
-type Mode = 'sign-in' | 'sign-up';
-
 const ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-credential':    'Invalid email or password.',
   'auth/user-not-found':        'No account found with this email.',
@@ -20,14 +18,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default function AuthPage() {
-  const [mode, setMode]         = useState<Mode>('sign-in');
+  const mode                    = useAuthStore(s => s.authMode);
+  const closeAuthModal          = useAuthStore(s => s.closeAuthModal);
+  const openAuthModal           = useAuthStore(s => s.openAuthModal);
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const { setError } = useAuthStore();
 
   const toggle = () => {
-    setMode(m => (m === 'sign-in' ? 'sign-up' : 'sign-in'));
+    openAuthModal(mode === 'sign-in' ? 'sign-up' : 'sign-in');
     setEmail('');
     setPassword('');
     setError(null);
@@ -52,6 +52,7 @@ export default function AuthPage() {
         const result = await authService.signIn(email.trim(), password);
         if (result.success) {
           console.log('[LedgerX] AuthPage – signIn success, uid:', result.user?.uid);
+          closeAuthModal();
           toast.success('Welcome back!');
         } else {
           const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
@@ -63,6 +64,7 @@ export default function AuthPage() {
         const result = await authService.signUp(email.trim(), password);
         if (result.success) {
           console.log('[LedgerX] AuthPage – signUp success, uid:', result.user?.uid);
+          closeAuthModal();
           toast.success('Account created! Welcome to LedgerX');
         } else {
           const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
@@ -86,20 +88,33 @@ export default function AuthPage() {
           className="px-8 pt-[30px] pb-6"
           style={{ background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(243 75% 59%))' }}
         >
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base mb-4"
-            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-          >
-            LX
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base mb-4"
+                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+              >
+                LX
+              </div>
+              <h1 className="text-[22px] font-bold tracking-tight mb-1.5" style={{ color: '#fff' }}>
+                {mode === 'sign-in' ? 'Welcome back' : 'Create your account'}
+              </h1>
+              <p className="text-[13.5px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                {mode === 'sign-in'
+                  ? 'Sign in to sync your ledger across devices.'
+                  : 'Sign up to keep your data safe in the cloud.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={closeAuthModal}
+              className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}
+              aria-label="Close authentication"
+            >
+              ✕
+            </button>
           </div>
-          <h1 className="text-[22px] font-bold tracking-tight mb-1.5" style={{ color: '#fff' }}>
-            {mode === 'sign-in' ? 'Welcome back' : 'Create your account'}
-          </h1>
-          <p className="text-[13.5px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
-            {mode === 'sign-in'
-              ? 'Sign in to sync your ledger across devices.'
-              : 'Sign up to keep your data safe in the cloud.'}
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-8 py-6 space-y-4">

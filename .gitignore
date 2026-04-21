@@ -3,6 +3,15 @@
 .env.*
 !.env.example
 
+# Android release signing secrets
+my-release-key.jks
+*.jks
+*.keystore
+local.properties
+android/key.properties
+*.secret.properties
+*.secrets.properties
+
 # Logs
 logs
 *.log

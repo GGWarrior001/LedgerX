@@ -12,7 +12,7 @@ import { create } from 'zustand';
 import { storage } from '@/lib/storage';
 import type { Profile, Notification, AppSettings, ViewId, Invoice } from '@/lib/types';
 
-const DEFAULT_PROFILE: Profile = {
+export const DEFAULT_PROFILE: Profile = {
   name: '',
   role: 'Admin',
   city: '',
@@ -67,6 +67,7 @@ interface AppStoreState {
   // Actions
   setProfile:           (profile: Profile) => void;
   saveSettings:         (partial: Partial<Profile>) => void;
+  ensureProfile:        () => void;
   setActiveView:        (view: ViewId) => void;
   toggleTheme:          () => void;
   togglePrivacy:        () => void;
@@ -101,6 +102,14 @@ export const useAppStore = create<AppStoreState>((set) => ({
       const profile = { ...(s.profile ?? DEFAULT_PROFILE), ...partial };
       storage.save('lx_profile', profile);
       return { profile };
+    });
+  },
+
+  ensureProfile: () => {
+    set(s => {
+      if (s.profile) return s;
+      storage.save('lx_profile', DEFAULT_PROFILE);
+      return { profile: DEFAULT_PROFILE };
     });
   },
 

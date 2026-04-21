@@ -19,6 +19,7 @@ export interface Expense {
   date: string;
   receipt: 'attached' | 'pending';
   amount: number;
+  user_id?: string;
 }
 
 export interface Client {
@@ -67,6 +68,12 @@ export interface AppSettings {
   sessionTimeout: number; // minutes
   privacyMode: boolean;
   encryptionEnabled: boolean;
+}
+
+export interface LocalUser {
+  id: 'local';
+  name: string;
+  provider: 'local';
 }
 
 export type ViewId = 'dashboard' | 'invoices' | 'expenses' | 'clients' | 'vendors' | 'reports' | 'ledger' | 'settings';
