@@ -277,7 +277,7 @@ const total = Math.round(baseAmount * 118) / 100;
 
 // ❌ Bad: Obvious or confusing
 // Loop through items
-// multiple by 1.18
+// multiply by 1.18
 ```
 
 ### JSDoc Comments
@@ -302,126 +302,47 @@ function calculateTotal(amount: number, taxRate: number): number {
 
 ```markdown
 ## Description
-Brief description of the bug.
+A clear and concise description of the bug.
 
 ## Steps to Reproduce
 1. Go to '...'
 2. Click on '...'
-3. See error
+3. Scroll down to '...'
+4. See error
 
 ## Expected Behavior
-What should happen.
+A clear description of what you expected to happen.
 
 ## Actual Behavior
-What actually happens.
-
-## Environment
-- OS: (Windows/macOS/Linux)
-- Browser: (Chrome/Firefox/Safari)
-- Node version: (18.x/20.x)
-- Bun version: (if applicable)
+A clear description of what actually happened.
 
 ## Screenshots
-[Optional]
+If applicable, add screenshots to help explain the problem.
+
+## Environment
+- OS: [e.g. macOS 14, Windows 11, Ubuntu 22.04]
+- Browser: [e.g. Chrome 124, Firefox 125] (for web)
+- Node.js version: [e.g. 20.11.0]
+- LedgerX version: [e.g. 1.3.0]
+- Platform: [Web / Electron / Android]
 
 ## Additional Context
-[Optional]
+Any other context about the problem, such as whether it is intermittent,
+whether it happens after a specific action, or relevant log output.
 ```
 
-## 💡 Feature Request Template
+## 🔒 Reporting Security Vulnerabilities
 
-```markdown
-## Description
-What feature would you like?
+If you discover a security vulnerability, **please do not open a public GitHub issue**.
 
-## Problem
-What problem does this solve?
+Instead, report it responsibly by:
 
-## Solution
-How should it work?
+1. Emailing the maintainers directly (see the GitHub profile for contact details).
+2. Including a clear description of the vulnerability, steps to reproduce, and potential impact.
+3. Allowing reasonable time for a fix before any public disclosure.
 
-## Examples
-Use cases or examples.
+We take security seriously and will respond promptly.
 
-## Alternatives
-Any alternative approaches?
-```
+## 🙏 Thank You
 
-## 🎓 Learning Resources
-
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [React Documentation](https://react.dev/)
-- [Vite Guide](https://vitejs.dev/)
-- [Git Best Practices](https://git-scm.com/docs)
-
-## ✅ PR Review Checklist
-
-Reviewers will check for:
-
-- [ ] Follows project style guidelines
-- [ ] Well-tested (unit + E2E tests)
-- [ ] Documentation updated
-- [ ] No breaking changes (or documented)
-- [ ] No security vulnerabilities
-- [ ] Performance impact considered
-- [ ] Clean commit history
-- [ ] Code is readable and maintainable
-
-## 🚨 Code of Conduct
-
-- **Be respectful** - Treat others with kindness
-- **Be constructive** - Provide helpful feedback
-- **Be inclusive** - Welcome contributions from all backgrounds
-- **Report issues** - Use private channels for security concerns
-
-## 🤝 Getting Help
-
-- **Ask questions** - Create a discussion or comment on issue
-- **Review documentation** - Check [README.md](README.md) and [DEVELOPMENT.md](DEVELOPMENT.md)
-- **Look at examples** - Check existing code patterns
-- **Join community** - Discuss in GitHub discussions
-
-## 📊 Development Workflow Summary
-
-```
-1. Fork repository
-   ↓
-2. Clone fork and create feature branch
-   ↓
-3. Make changes following code standards
-   ↓
-4. Write/update tests (aim for 80%+ coverage)
-   ↓
-5. Run lint, tests, and build checks
-   ↓
-6. Commit with clear messages
-   ↓
-7. Push to your fork
-   ↓
-8. Create pull request with description
-   ↓
-9. Address review feedback
-   ↓
-10. Merge and celebrate! 🎉
-```
-
-## 🎁 Recognition
-
-Contributors are recognized in:
-- GitHub contributors page
-- Release notes (for significant contributions)
-- Project README (for major features)
-
-## 📞 Questions?
-
-Feel free to:
-- Open an issue for bugs
-- Create a discussion for questions
-- Comment on existing issues
-- Ask in pull request reviews
-
----
-
-**Thank you for contributing to LedgerX!** 🙏
-
-Your effort helps make LedgerX better for everyone.
+Every contribution — no matter how small — helps make LedgerX better. We appreciate your time and effort!

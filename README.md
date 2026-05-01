@@ -8,8 +8,6 @@ A modern, privacy-first finance management application built with React, featuri
 
 ---
 
----
-
 ## ✨ Features
 
 - **Dashboard** — At-a-glance financial overview with charts, key metrics, and recent transactions
@@ -110,11 +108,11 @@ bun install
 # OR with npm
 npm install
 
-# Start development server (runs on http://localhost:8080)
+# Start development server (runs on http://localhost:5173)
 bun run dev
 ```
 
-The app will be available at `http://localhost:8080`.
+The app will be available at `http://localhost:5173`.
 
 ### Firebase Setup (Optional — for Cloud Sync)
 
@@ -383,5 +381,3 @@ Currently, LedgerX supports English with multi-currency display. Future versions
 ---
 
 **Made with ❤️ by the LedgerX Team**
-
-

@@ -1,511 +1,287 @@
-# Development Guide
+# LedgerX — Development Guide
 
-This document provides detailed information for developers working on LedgerX.
-
-## 📋 Table of Contents
-
-- [Development Setup](#development-setup)
-- [Project Structure](#project-structure)
-- [Technology Stack](#technology-stack)
-- [Code Standards](#code-standards)
-- [Testing](#testing)
-- [Debugging](#debugging)
-- [Common Tasks](#common-tasks)
-- [Troubleshooting](#troubleshooting)
-
-## Development Setup
-
-### 1. Clone and Install
-
-```bash
-git clone https://github.com/GGWarrior001/LedgerX.git
-cd LedgerX
-bun install
-```
-
-### 2. Environment Setup
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-
-# For Firebase (optional, app works offline without it)
-# Add your Firebase credentials to .env
-```
-
-### 3. Start Development
-
-```bash
-# Run development server with hot module replacement (HMR)
-bun run dev
-
-# Server will start at http://localhost:8080
-# Changes to source files will automatically reload
-```
-
-## Project Structure
-
-```
-LedgerX/
-├── src/
-│   ├── components/          # Reusable React components
-│   │   ├── layout/         # Page layout components (Sidebar, Topbar)
-│   │   ├── modals/         # Modal dialogs for CRUD operations
-│   │   ├── ui/             # shadcn/ui component library
-│   │   ├── AutoLock.tsx    # Session timeout / auto-lock handler
-│   │   ├── NavLink.tsx     # Navigation link component
-│   │   └── NotificationPanel.tsx
-│   ├── contexts/            # React Context for global state
-│   │   ├── AppContext.tsx  # Global app state (transactions, clients, etc.)
-│   │   └── AuthContext.tsx # Firebase authentication state
-│   ├── hooks/               # Custom React hooks
-│   ├── lib/                 # Utilities and helpers
-│   │   ├── constants.ts    # App constants (currencies, fiscal years, etc.)
-│   │   ├── firebase.ts     # Firebase initialization
-│   │   ├── firestoreSync.ts# Cloud sync utilities
-│   │   ├── storage.ts      # Encrypted localStorage wrapper
-│   │   ├── types.ts        # TypeScript interfaces and types
-│   │   └── utils.ts        # Helper functions
-│   ├── pages/               # Page components (routes)
-│   │   ├── Dashboard.tsx
-│   │   ├── Invoices.tsx
-│   │   ├── Expenses.tsx
-│   │   ├── Clients.tsx
-│   │   ├── Vendors.tsx
-│   │   ├── Reports.tsx
-│   │   ├── Ledger.tsx
-│   │   ├── Settings.tsx
-│   │   ├── Auth.tsx         # Firebase sign-in/sign-up
-│   │   └── NotFound.tsx
-│   ├── test/                # Test setup and examples
-│   ├── App.tsx              # Root component
-│   └── main.tsx             # React DOM entry point
-├── electron/                # Electron desktop app
-│   ├── main.js             # Main process
-│   └── preload.js          # Context bridge
-├── android/                 # Capacitor Android project
-├── public/                  # Static assets
-├── index.html               # HTML template
-├── vite.config.ts          # Vite configuration
-├── tsconfig.json           # TypeScript configuration
-├── eslint.config.js        # ESLint rules
-├── tailwind.config.ts      # Tailwind CSS config
-└── package.json            # Dependencies and scripts
-```
-
-## Technology Stack
-
-### Frontend
-- **React 18**: UI library
-- **TypeScript 5**: Type-safe JavaScript
-- **Vite 5**: Lightning-fast build tool
-- **React Router v6**: Client-side routing
-- **Tailwind CSS 3**: Utility-first CSS framework
-- **shadcn/ui**: Pre-built, customizable components
-- **Recharts**: Data visualization library
-
-### State Management
-- **React Context**: Global state management
-- **TanStack Query (React Query)**: Server state and caching
-
-### Forms & Validation
-- **React Hook Form**: Performant form handling
-- **Zod**: Runtime schema validation
-
-### Encryption & Auth
-- **crypto-js**: AES-256-CBC encryption (client-side)
-- **Firebase Auth**: Authentication (optional)
-- **Firestore**: Cloud database (optional)
-
-### Testing
-- **Vitest**: Fast unit testing framework
-- **Playwright**: E2E testing framework
-- **@testing-library/react**: React testing utilities
-
-### Desktop & Mobile
-- **Electron 41**: Desktop app framework
-- **Capacitor 6**: Mobile app framework (Android)
-
-### Build & Development
-- **TypeScript 5**: Type checking
-- **ESLint 9**: Code linting
-- **Tailwind CSS**: Styling
-- **PostCSS**: CSS preprocessing
-
-## Code Standards
-
-### TypeScript
-
-- Always define types explicitly
-- Use `interface` for object types, `type` for unions/aliases
-- Avoid `any`; use `unknown` if needed
-- Enable strict mode checks in tsconfig
-
-Example:
-```typescript
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-const user: User = { id: '1', name: 'John', email: 'john@example.com' };
-```
-
-### React Components
-
-- Use functional components with hooks
-- Extract reusable logic into custom hooks
-- Props should be typed with `interface`
-- Keep components small and focused (ideally <200 lines)
-
-Example:
-```typescript
-interface ButtonProps {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}
-
-const Button: React.FC<ButtonProps> = ({ label, onClick, disabled = false }) => (
-  <button onClick={onClick} disabled={disabled}>
-    {label}
-  </button>
-);
-```
-
-### File Organization
-
-- One component per file
-- Group related files in directories
-- Use barrel exports (index.ts) for cleaner imports
-- Name files with PascalCase for components, camelCase for utilities
-
-### Naming Conventions
-
-- **Components**: PascalCase (e.g., `InvoiceModal.tsx`)
-- **Functions/Variables**: camelCase (e.g., `getInvoiceTotal()`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `API_BASE_URL`)
-- **Types/Interfaces**: PascalCase (e.g., `Invoice`, `ClientData`)
-
-### Comments
-
-- Document complex logic
-- Explain "why", not "what" (code should be self-explanatory)
-- Keep comments concise and updated
-
-```typescript
-// Calculate invoice total with tax (VAT = 18%)
-const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-const vat = total * 0.18;
-const finalTotal = total + vat;
-```
-
-### Linting
-
-Run ESLint before committing:
-
-```bash
-bun run lint
-```
-
-Fix auto-fixable issues:
-
-```bash
-eslint . --fix
-```
-
-## Testing
-
-### Unit Tests (Vitest)
-
-```bash
-# Run tests once
-bun run test
-
-# Run tests in watch mode
-bun run test:watch
-
-# Run tests with coverage
-bun run test --coverage
-```
-
-Example test:
-```typescript
-import { describe, it, expect } from 'vitest';
-import { calculateTotal } from '../utils';
-
-describe('calculateTotal', () => {
-  it('should sum all values', () => {
-    expect(calculateTotal([10, 20, 30])).toBe(60);
-  });
-
-  it('should handle empty array', () => {
-    expect(calculateTotal([])).toBe(0);
-  });
-});
-```
-
-### E2E Tests (Playwright)
-
-```bash
-# Run E2E tests
-npx playwright test
-
-# Run E2E tests with UI
-npx playwright test --ui
-
-# Run specific test file
-npx playwright test tests/auth.spec.ts
-```
-
-Example E2E test:
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('user can create invoice', async ({ page }) => {
-  await page.goto('http://localhost:8080');
-  await page.click('text=New Invoice');
-  await page.fill('input[name="clientName"]', 'Acme Corp');
-  await page.click('button:has-text("Create")');
-  await expect(page).toHaveURL('/invoices');
-});
-```
-
-## Debugging
-
-### Browser DevTools
-
-1. Open http://localhost:8080
-2. Press `F12` or `Ctrl+Shift+I` to open DevTools
-3. Use Console, Sources, and Network tabs to debug
-
-### VS Code Debugging
-
-Create `.vscode/launch.json`:
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "chrome",
-      "request": "launch",
-      "name": "Launch Chrome",
-      "url": "http://localhost:8080",
-      "webRoot": "${workspaceFolder}/src",
-      "sourceMapPathOverride": {
-        "webpack:///*": "${webspaceFolder}/*"
-      }
-    }
-  ]
-}
-```
-
-### Electron Debugging
-
-```bash
-# Enable debug mode
-DEBUG=* bun run electron
-
-# Or with Chrome DevTools:
-bun run electron
-# Then press Ctrl+Shift+I in the app
-```
-
-## Common Tasks
-
-### Add a New Page
-
-1. Create `src/pages/MyPage.tsx`:
-```typescript
-const MyPage = () => {
-  return <div>My Page Content</div>;
-};
-
-export default MyPage;
-```
-
-2. Add route to `src/App.tsx`:
-```typescript
-import MyPage from './pages/MyPage.tsx';
-
-// In Routes component:
-<Route path="/my-page" element={<MyPage />} />
-```
-
-3. Add navigation link in `src/components/layout/Sidebar.tsx`
-
-### Add a New Component
-
-1. Create component file `src/components/MyComponent.tsx`
-2. Define props interface
-3. Export component
-4. Add tests in `src/test/MyComponent.test.ts`
-
-Example:
-```typescript
-interface MyComponentProps {
-  title: string;
-  value: number;
-}
-
-const MyComponent: React.FC<MyComponentProps> = ({ title, value }) => {
-  return (
-    <div>
-      <h2>{title}</h2>
-      <p>{value}</p>
-    </div>
-  );
-};
-
-export default MyComponent;
-```
-
-### Add a Custom Hook
-
-1. Create `src/hooks/useMyHook.ts`:
-```typescript
-import { useState, useCallback } from 'react';
-
-export const useMyHook = () => {
-  const [state, setState] = useState(null);
-  
-  const handleAction = useCallback(() => {
-    setState('new value');
-  }, []);
-
-  return { state, handleAction };
-};
-```
-
-2. Use in components:
-```typescript
-import { useMyHook } from '@/hooks/useMyHook';
-
-const MyComponent = () => {
-  const { state, handleAction } = useMyHook();
-  return <button onClick={handleAction}>{state}</button>;
-};
-```
-
-### Update TypeScript Types
-
-1. Edit `src/lib/types.ts`:
-```typescript
-export interface Invoice {
-  id: string;
-  clientId: string;
-  amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
-  createdAt: Date;
-}
-```
-
-2. Use in components:
-```typescript
-import type { Invoice } from '@/lib/types';
-
-const InvoiceRow: React.FC<{ invoice: Invoice }> = ({ invoice }) => {
-  return <tr><td>{invoice.id}</td></tr>;
-};
-```
-
-## Troubleshooting
-
-### Port 8080 Already in Use
-
-```bash
-# Kill process using port 8080 (macOS/Linux)
-lsof -ti:8080 | xargs kill -9
-
-# Or specify different port
-bun run dev --port 3000
-```
-
-### Dependencies Not Installed
-
-```bash
-# Clear cache and reinstall
-rm -rf node_modules
-bun install
-```
-
-### TypeScript Errors
-
-```bash
-# Rebuild type definitions
-bun install
-
-# Check TypeScript compilation
-npx tsc --noEmit
-```
-
-### Firebase Not Configured
-
-- Ensure `.env` file exists with Firebase credentials
-- Check `.env.example` for required variables
-- Firebase is optional; app works offline without it
-
-### Build Fails
-
-```bash
-# Clear build cache
-rm -rf dist
-
-# Rebuild
-bun run build
-
-# Check for TypeScript errors
-npx tsc --noEmit
-```
-
-### Electron App Won't Start
-
-```bash
-# 1. Build web assets first
-bun run build
-
-# 2. Check for port 8080 conflicts
-lsof -ti:8080 | xargs kill -9
-
-# 3. Enable debug logging
-DEBUG=* bun run electron
-```
-
-## Performance Tips
-
-1. **Code Splitting**: Lazy-load pages with React Router
-2. **Image Optimization**: Use appropriate formats and sizes
-3. **Bundle Analysis**: Check build output size
-4. **Memoization**: Use `useMemo` and `useCallback` wisely
-5. **Query Caching**: Leverage TanStack Query's built-in caching
-
-## Git Workflow
-
-```bash
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and commit
-git add .
-git commit -m "Add amazing feature"
-
-# Push to remote
-git push origin feature/amazing-feature
-
-# Create pull request on GitHub
-```
-
-## Resources
-
-- [Vite Docs](https://vitejs.dev/)
-- [React Docs](https://react.dev/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [Tailwind CSS Docs](https://tailwindcss.com/docs)
-- [React Router Docs](https://reactrouter.com/)
-- [shadcn/ui Docs](https://ui.shadcn.com/)
+This document covers everything you need to know to work on LedgerX locally, including environment setup, project conventions, architecture decisions, and debugging tips.
 
 ---
 
-Happy coding! 🚀
+## 📋 Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Initial Setup](#initial-setup)
+3. [Development Server](#development-server)
+4. [Project Conventions](#project-conventions)
+5. [Architecture Overview](#architecture-overview)
+6. [Encryption Flow](#encryption-flow)
+7. [State Management](#state-management)
+8. [Adding a New Page](#adding-a-new-page)
+9. [Adding a New Modal](#adding-a-new-modal)
+10. [Working with Firebase](#working-with-firebase)
+11. [Building for Each Platform](#building-for-each-platform)
+12. [Debugging](#debugging)
+13. [Dependency Management](#dependency-management)
+
+---
+
+## Prerequisites
+
+| Tool | Minimum Version | Notes |
+|------|----------------|-------|
+| Node.js | 18 | LTS recommended |
+| Bun | 1.x | Preferred package manager / runner |
+| Git | any | |
+| Java JDK | 11 | Android builds only |
+| Android SDK | 31 | Android builds only |
+| Android Studio | any | Android builds only |
+
+---
+
+## Initial Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/GGWarrior001/LedgerX.git
+cd LedgerX
+
+# 2. Install all dependencies
+bun install
+
+# 3. Create your local environment file
+cp .env.example .env
+# Edit .env — Firebase keys are optional; leave blank for offline-only dev
+
+# 4. Start the dev server
+bun run dev
+# → http://localhost:5173
+```
+
+---
+
+## Development Server
+
+```bash
+bun run dev          # Vite dev server with HMR on http://localhost:5173
+bun run build        # Production build → dist/
+bun run preview      # Serve the production build locally
+bun run lint         # ESLint check
+bun run test         # Vitest unit tests (single run)
+bun run test:watch   # Vitest in watch mode
+```
+
+---
+
+## Project Conventions
+
+### File naming
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| React components | PascalCase `.tsx` | `InvoiceModal.tsx` |
+| Hooks | camelCase, `use` prefix | `useInvoices.ts` |
+| Utilities / lib | camelCase `.ts` | `formatCurrency.ts` |
+| Types | Defined in `src/lib/types.ts` | — |
+| Tests | Co-located, `.test.ts` suffix | `InvoiceModal.test.ts` |
+
+### Import order (enforced by ESLint)
+
+1. Node built-ins
+2. External packages
+3. Internal aliases (`@/components/...`)
+4. Relative imports
+
+### Component structure
+
+```tsx
+// 1. Imports
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+
+// 2. Types / interfaces local to this file
+interface Props { ... }
+
+// 3. Component
+const MyComponent: React.FC<Props> = ({ ... }) => {
+  // 3a. Hooks
+  // 3b. Derived state / memos
+  // 3c. Handlers
+  // 3d. Render
+  return (...);
+};
+
+// 4. Default export
+export default MyComponent;
+```
+
+---
+
+## Architecture Overview
+
+```
+User interaction
+      │
+      ▼
+  React pages  ←──────────────────┐
+      │                           │
+      ▼                           │
+AppContext (global state)         │
+      │                           │
+      ├──► storage.ts             │
+      │    (AES-256 encrypted     │
+      │     localStorage)         │
+      │                           │
+      └──► firestoreSync.ts  ─────┘
+           (optional Firebase
+            cloud sync)
+```
+
+- **Pages** read/write data exclusively through `AppContext`.
+- `AppContext` persists to `storage.ts` on every state change.
+- When the user is authenticated, `firestoreSync.ts` mirrors the same data to Firestore.
+- The UI never calls `localStorage` or Firebase directly.
+
+---
+
+## Encryption Flow
+
+```
+User passphrase
+      │
+      ▼  PBKDF2 (10,000 iterations, SHA-256, 256-bit output)
+Derived key
+      │
+      ▼  AES-256-CBC (random IV per write)
+Ciphertext  →  stored in localStorage as Base64
+```
+
+Key points:
+- The passphrase never leaves the device.
+- A new random IV is generated on every write, stored prepended to the ciphertext.
+- `storage.ts` exposes `secureGet(key)` / `secureSet(key, value)` — always use these instead of `localStorage` directly.
+
+---
+
+## State Management
+
+LedgerX uses two complementary tools:
+
+| Tool | Used for |
+|------|---------|
+| React Context (`AppContext`) | Global mutable state: invoices, expenses, clients, vendors, settings |
+| TanStack Query | Server-derived or async data (e.g. Firestore reads, future API calls) |
+
+**Rule of thumb:** if the data lives in encrypted localStorage, it belongs in `AppContext`. If it is fetched asynchronously from a remote source, use TanStack Query.
+
+---
+
+## Adding a New Page
+
+1. Create `src/pages/MyPage.tsx`.
+2. Add a route in the router configuration (usually `src/main.tsx` or a dedicated `routes.tsx`).
+3. Add a nav entry in `src/components/layout/Sidebar.tsx` using `<NavLink>`.
+4. If the page needs data, add a selector/action to `AppContext`.
+
+---
+
+## Adding a New Modal
+
+1. Create `src/components/modals/MyModal.tsx`.
+2. Accept `isOpen: boolean` and `onClose: () => void` as props.
+3. Use `<Dialog>` from `@/components/ui/dialog` (shadcn/ui) for accessibility.
+4. Wire it up in the relevant page with a local `useState` for `isOpen`.
+
+---
+
+## Working with Firebase
+
+Firebase is entirely **optional**. The app boots without any Firebase credentials.
+
+To test cloud sync locally:
+
+1. Fill in `VITE_FIREBASE_*` values in `.env`.
+2. Enable **Email/Password** auth and **Firestore** in your Firebase project.
+3. Sign in via the Auth page in the running app.
+4. Data syncs automatically after sign-in.
+
+Firestore security rules (recommended minimum for development):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+---
+
+## Building for Each Platform
+
+### Web (production)
+
+```bash
+bun run build        # outputs to dist/
+bun run preview      # verify before deploying
+```
+
+### Electron (desktop)
+
+```bash
+bun run build
+bun run electron           # run locally
+bun run electron:build     # package (AppImage / NSIS)
+```
+
+### Android (Capacitor)
+
+```bash
+bun run build
+npx cap sync android       # copy dist/ into the Android project
+npx cap open android       # open Android Studio
+# In Android Studio: Run ▶ or Build → Generate Signed APK
+```
+
+---
+
+## Debugging
+
+### Browser (web)
+
+- Open DevTools (`F12`) on `http://localhost:5173`.
+- React DevTools extension is recommended for inspecting Context state.
+- All encrypted values in `localStorage` appear as Base64 strings — decrypt via `storage.ts` helpers in the console if needed.
+
+### Electron
+
+```bash
+DEBUG=* bun run electron
+```
+
+The DevTools window opens automatically in development mode.
+
+### Android
+
+- Enable **USB debugging** on your device.
+- Open `chrome://inspect` in desktop Chrome to attach to the WebView.
+- Logcat in Android Studio shows Capacitor bridge messages.
+
+---
+
+## Dependency Management
+
+```bash
+# Add a runtime dependency
+bun add <package>
+
+# Add a dev dependency
+bun add -d <package>
+
+# Upgrade all dependencies interactively
+bunx npm-check-updates -i
+
+# Audit for known vulnerabilities
+bun audit
+```
+
+> Before upgrading major versions of `crypto-js`, `firebase`, or `electron`, check the respective changelogs carefully — these packages have historically included breaking API changes.
