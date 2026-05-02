@@ -3,20 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <!-- Phase 3: Content Security Policy — restricts script/style/connect origins -->
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline' 'unsafe-eval';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               connect-src 'self' https://*.googleapis.com https://*.firebaseio.com;
+               img-src 'self' data: blob:;" />
+
+    <!-- Phase 5: App identity — replace Lovable placeholders -->
+    <title>LedgerX — Personal Finance &amp; Accounting</title>
+    <meta name="description" content="LedgerX — A modern, privacy-first accounting app with AES-256 encryption, invoicing, expense tracking, and optional cloud sync." />
+    <meta name="author" content="LedgerX" />
+    <meta name="theme-color" content="#6366f1" />
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="LedgerX — Personal Finance &amp; Accounting" />
+    <meta property="og:description" content="Privacy-first accounting with AES-256 encryption, invoicing, expenses, client management, and cloud sync." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="LedgerX" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@LedgerXApp" />
+    <meta name="twitter:title" content="LedgerX — Personal Finance &amp; Accounting" />
+    <meta name="twitter:description" content="Privacy-first accounting with AES-256 encryption, invoicing, expenses, and cloud sync." />
+    <meta name="twitter:image" content="/og-image.png" />
   </head>
 
   <body>

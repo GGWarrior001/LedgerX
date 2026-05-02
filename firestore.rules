@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cloud data snapshot — one document per user
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Append-only ledger entries sub-collection
+    match /ledgers/{userId}/entries/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
