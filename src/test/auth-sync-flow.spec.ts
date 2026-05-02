@@ -1,5 +1,5 @@
 /**
- * tests/e2e/auth-sync-flow.spec.ts
+ * src/test/auth-sync-flow.spec.ts
  *
  * Phase 4 — Core E2E flow:
  *   Sign in → add invoice → refresh → verify sync → lock → unlock → verify data persists

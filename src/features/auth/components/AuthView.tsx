@@ -17,7 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   'auth/app-not-authorized':    'This app is not authorized to use Firebase Authentication.',
 };
 
-export default function AuthPage() {
+export default function AuthView() {
   const mode                    = useAuthStore(s => s.authMode);
   const closeAuthModal          = useAuthStore(s => s.closeAuthModal);
   const openAuthModal           = useAuthStore(s => s.openAuthModal);
