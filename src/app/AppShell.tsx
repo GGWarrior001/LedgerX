@@ -26,7 +26,7 @@ import {
 
 import Sidebar    from '@/components/layout/Sidebar';
 import Topbar     from '@/components/layout/Topbar';
-import AuthPage   from '@/features/auth/components/AuthPage';
+import AuthView   from '@/features/auth/components/AuthView';
 import AutoLock   from '@/features/auth/components/AutoLock';
 
 import DashboardView from '@/features/dashboard/components/DashboardView';
@@ -238,7 +238,7 @@ export default function AppShell() {
   return (
     <>
       <AppContent />
-      {authModalOpen && <AuthPage />}
+      {authModalOpen && <AuthView />}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/shared/stores/useAppStore';
-import NotificationPanel from '@/shared/components/NotificationPanel';
+import NotificationPanel from '@/components/NotificationPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ViewId } from '@/shared/types';
 
