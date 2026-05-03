@@ -4,14 +4,14 @@
  * Provides a `syncFromCloud` to pull data on sign-in and `syncToCloud` to push
  * the current store snapshot whenever local data changes.
  */
-import { fetchCloudData, fetchLedgerEntries, saveCloudData, addLedgerEntry } from '@/shared/api/firestoreClient';
+import { fetchCloudData, fetchLedgerEntries, saveCloudData, addLedgerEntry } from '@/lib/firestoreSync';
 import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
 import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useClientStore } from '@/features/clients/store/useClientStore';
 import { useVendorStore } from '@/features/vendors/store/useVendorStore';
-import { useAppStore, buildNotifications } from '@/shared/stores/useAppStore';
-import { storage } from '@/shared/services/storageService';
-import type { Invoice, Expense, CloudData, EntryType } from '@/shared/types';
+import { useAppStore } from '@/shared/stores/useAppStore';
+import { storage } from '@/lib/storage';
+import type { Invoice, Expense, CloudData, EntryType } from '@/lib/types';
 
 /**
  * Pull data from Firestore when a user signs in (or the page reloads while
@@ -42,7 +42,7 @@ export async function syncFromCloud(uid: string): Promise<void> {
       storage.save('lx_profile', cloud.profile);
     }
 
-    useAppStore.getState().refreshNotifications(invoices);
+    useAppStore.getState().rebuildNotifications(invoices);
   } catch (err) {
     console.error('[LedgerX] Cloud sync error:', err);
   }

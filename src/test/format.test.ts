@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmt, fmtDate, getInitials, currentFY, getGreeting } from '@/shared/utils/format';
+import { fmt, fmtDate, getInitials, currentFY, getGreeting } from '@/lib/constants';
 
 describe('fmt', () => {
   it('formats numbers with Indian locale separators', () => {
