@@ -76,6 +76,10 @@ class StorageService {
     localStorage.removeItem(key);
   }
 
+  clearEncryptionKey(): void {
+    this.encryptionKey = null;
+  }
+
   clearAll(): void {
     localStorage.clear();
   }

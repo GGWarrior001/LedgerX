@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { syncFromCloud, syncToCloud, pushLedgerEntry } from '@/shared/services/syncService';
-import type { Invoice, Expense, EntryType } from '@/shared/types';
+import type { Invoice, Expense, EntryType } from '@/lib/types';
 
 /**
  * Subscribes to auth state and syncs data from the cloud on sign-in.

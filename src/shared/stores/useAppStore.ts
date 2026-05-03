@@ -126,7 +126,7 @@ export const useAppStore = create<AppStoreState>((set) => ({
 
   togglePrivacy: () => set(s => ({ privacyMode: !s.privacyMode })),
 
-  lock: () => set({ locked: true }),
+  lock: () => { storage.clearEncryptionKey(); set({ locked: true }); },
 
   unlock: (passcode) => {
     const ok = storage.unlock(passcode);

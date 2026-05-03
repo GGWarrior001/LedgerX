@@ -43,7 +43,7 @@ export default function SettingsView() {
   };
 
   const handleSetupEncryption = () => {
-    if (passcode.length < 4) { toast.error('Passcode must be at least 4 characters'); return; }
+    if (passcode.length < 6) { toast.error('Passcode must be at least 6 characters'); return; }
     setupEncryption(passcode);
     setPasscode('');
     toast.success('Encryption enabled. Your data is now secured.');
@@ -171,7 +171,7 @@ export default function SettingsView() {
               type="password"
               value={passcode}
               onChange={e => setPasscode(e.target.value)}
-              placeholder="Set a passcode (min 4 chars)"
+              placeholder="Set a passcode (min 6 chars)"
               className="border border-border rounded-lg px-3 py-[7px] text-[13px] bg-background outline-none focus:border-primary transition-colors flex-1"
             />
             <button
