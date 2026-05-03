@@ -39,7 +39,7 @@ A modern, privacy-first finance management application built with React, featuri
 | Styling | Tailwind CSS 3 + shadcn/ui |
 | Charts | Recharts |
 | Routing | React Router v6 |
-| State | React Context + TanStack Query |
+| State | Zustand + TanStack Query |
 | Forms | React Hook Form + Zod |
 | Encryption | crypto-js (AES-256-CBC, PBKDF2) |
 | Auth / Sync | Firebase Auth + Firestore |
@@ -53,18 +53,30 @@ A modern, privacy-first finance management application built with React, featuri
 │   ├── main.js          # Electron main process
 │   └── preload.js       # Context bridge / preload script
 └── src/
+    ├── app/
+    │   └── AppShell.tsx     # Root shell: auth listener, cloud sync, layout
     ├── components/
     │   ├── layout/          # Sidebar, Topbar
     │   ├── modals/          # Client, Expense, Invoice, Vendor modals
     │   ├── ui/              # shadcn/ui components
-    │   ├── AutoLock.tsx     # Session timeout handler
     │   ├── NavLink.tsx      # Navigation component
-    │   ├── NotificationPanel.tsx
-    │   └── Onboarding.tsx   # First-time setup wizard
-    ├── contexts/
-    │   ├── AppContext.tsx   # Global app state
-    │   └── AuthContext.tsx  # Firebase authentication state
-    ├── hooks/               # Custom React hooks
+    │   └── NotificationPanel.tsx
+    ├── features/            # Domain feature modules
+    │   ├── auth/            # Sign-in / sign-up, AutoLock, Onboarding
+    │   ├── clients/
+    │   ├── dashboard/
+    │   ├── expenses/
+    │   ├── invoices/
+    │   ├── ledger/
+    │   ├── reports/
+    │   ├── settings/
+    │   └── vendors/
+    │       └── (each feature has components/, store/, services/)
+    ├── shared/
+    │   ├── components/      # ErrorBoundary and other cross-cutting UI
+    │   ├── hooks/           # Shared React hooks
+    │   ├── services/        # Firestore, storage, sync services
+    │   └── stores/          # useAppStore (shared UI state)
     ├── lib/
     │   ├── constants.ts     # App constants (currencies, fiscal years, categories)
     │   ├── firebase.ts      # Firebase app / auth / Firestore initialisation
@@ -72,18 +84,6 @@ A modern, privacy-first finance management application built with React, featuri
     │   ├── storage.ts       # Encrypted localStorage wrapper
     │   ├── types.ts         # TypeScript interfaces
     │   └── utils.ts         # Utility functions
-    ├── pages/
-    │   ├── Auth.tsx         # Sign-in / sign-up page (Firebase)
-    │   ├── Dashboard.tsx
-    │   ├── Expenses.tsx
-    │   ├── Invoices.tsx
-    │   ├── Clients.tsx
-    │   ├── Vendors.tsx
-    │   ├── Reports.tsx
-    │   ├── Ledger.tsx
-    │   ├── Settings.tsx
-    │   ├── Index.tsx        # App entry / redirect
-    │   └── NotFound.tsx     # 404 page
     ├── test/                # Unit test setup and examples
     └── main.tsx
 ```
@@ -272,7 +272,7 @@ Planned features and improvements:
 
 ### Architecture Guides
 
-- **State Management**: Using React Context + TanStack Query for optimal data fetching
+- **State Management**: Zustand per-domain stores (useInvoiceStore, useClientStore, etc.) + TanStack Query for async data fetching
 - **Encryption Flow**: PBKDF2 → AES-256-CBC on client-side only
 - **Authentication**: Firebase Auth with optional Firestore sync
 - **Testing**: Vitest for units, Playwright for E2E
