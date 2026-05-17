@@ -80,7 +80,7 @@ jobs:
 
       - name: Build and upload desktop release assets
         if: matrix.mobile != 'android'
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -93,7 +93,7 @@ jobs:
 
       - name: Build and upload Android release assets
         if: matrix.mobile == 'android'
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
