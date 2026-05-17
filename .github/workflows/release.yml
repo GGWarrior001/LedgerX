@@ -10,23 +10,18 @@ permissions:
 
 jobs:
   build-and-release:
-    name: Build & Release (${{ matrix.name }})
+    name: Build & Release (${{ matrix.platform }} ${{ matrix.args }})
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Windows
-            platform: windows-latest
-            args: "--bundles msi"
-            mobile: ""
-          - name: Linux
-            platform: ubuntu-latest
-            args: "--bundles deb,appimage"
-            mobile: ""
-          - name: Android
-            platform: ubuntu-latest
-            mobile: "android"
+          - platform: 'ubuntu-22.04'
+            args: '--target x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'ubuntu-22.04'
+            args: '--target aarch64-linux-android' # Explicitly for the APK bundle
 
     steps:
       - name: Checkout repository
@@ -38,52 +33,37 @@ jobs:
           node-version: lts/*
 
       - name: Install Rust stable
-        if: matrix.mobile != 'android'
+        if: matrix.args != '--target aarch64-linux-android'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Rust stable with Android targets
-        if: matrix.mobile == 'android'
+      - name: Install Rust stable with Android target
+        if: matrix.args == '--target aarch64-linux-android'
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, x86_64-linux-android
+          targets: aarch64-linux-android
 
       - name: Install Linux desktop dependencies
-        if: matrix.platform == 'ubuntu-latest' && matrix.mobile != 'android'
+        if: matrix.platform == 'ubuntu-22.04' && matrix.args != '--target aarch64-linux-android'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Setup Java 17
-        if: matrix.mobile == 'android'
+        if: matrix.args == '--target aarch64-linux-android'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Setup Android SDK
         id: setup-android
-        if: matrix.mobile == 'android'
+        if: matrix.args == '--target aarch64-linux-android'
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Initialize Android target
-        if: matrix.mobile == 'android'
-        run: |
-          if [ ! -d "src-tauri/gen/android" ]; then
-            npm run tauri android init
-          fi
-
-      - name: Build Android APK
-        if: matrix.mobile == 'android'
-        env:
-          ANDROID_HOME: ${{ steps.setup-android.outputs.sdk-path }}
-          NDK_HOME: ${{ steps.setup-android.outputs.sdk-path }}/ndk-bundle
-        run: npm run tauri android build -- --apk
-
-      - name: Build and upload desktop release assets
-        if: matrix.mobile != 'android'
+      - name: Build and upload release assets
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,17 +74,3 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-
-      - name: Build and upload Android release assets
-        if: matrix.mobile == 'android'
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "LedgerX ${{ github.ref_name }}"
-          releaseBody: "Automated release for ${{ github.ref_name }}"
-          releaseDraft: true
-          prerelease: false
-          args: --apk
-          mobile: android
