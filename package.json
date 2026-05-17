@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "electron": "electron .",
-    "electron:build": "vite build && electron-builder --linux"
+    "electron:build": "npm run electron:build:linux",
+    "electron:build:linux": "npm run build && electron-builder --linux AppImage --publish never",
+    "electron:build:win": "npm run build && electron-builder --win nsis --x64 --publish never"
   },
   "build": {
     "appId": "com.ledgerx.app",
@@ -33,7 +35,8 @@
       "target": [
         "AppImage"
       ],
-      "maintainer": "Tharun"
+      "maintainer": "Tharun",
+      "category": "Office"
     },
     "win": {
       "target": [

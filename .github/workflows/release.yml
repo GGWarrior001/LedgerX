@@ -1,82 +1,375 @@
 name: Release
 
 on:
+  pull_request:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "22.12.0"
+  JAVA_VERSION: "17"
+  CI: "true"
 
 jobs:
-  build-and-release:
-    name: Build & Release (${{ matrix.name }})
-    runs-on: ${{ matrix.platform }}
+  quality:
+    name: Quality checks
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Print tool versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test
+
+  desktop:
+    name: Desktop package (${{ matrix.name }})
+    needs:
+      - quality
+    if: ${{ always() && (startsWith(github.ref, 'refs/tags/') || needs.quality.result == 'success') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: 'Linux x64'
-            platform: 'ubuntu-22.04'
-            args: '--target x86_64-unknown-linux-gnu'
-            is_android: false
-          - name: 'Windows'
-            platform: 'windows-latest'
-            args: '' # Use default Windows target behavior from tauri-action
-            is_android: false
-          - name: 'Android APK'
-            platform: 'ubuntu-22.04'
-            args: '--target aarch64-linux-android' # Explicitly for the APK bundle
-            is_android: true
+          - name: Linux x64
+            os: ubuntu-latest
+            script: electron:build:linux
+            artifact_name: ledgerx-linux-x64
+          - name: Windows x64
+            os: windows-latest
+            script: electron:build:win
+            artifact_name: ledgerx-windows-x64
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: lts/*
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
-      - name: Install Rust stable
-        if: matrix.is_android != true
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Rust stable with Android target
-        if: matrix.is_android == true
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android
-
-      - name: Install Linux desktop dependencies
-        if: matrix.platform == 'ubuntu-22.04' && matrix.is_android != true
+      - name: Print tool versions
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Setup Java 17
-        if: matrix.is_android == true
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Android SDK
-        id: setup-android
-        if: matrix.is_android == true
-        uses: android-actions/setup-android@v3
+          node --version
+          npm --version
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --fund=false
 
-      - name: Build and upload release assets
-        uses: tauri-apps/tauri-action@v0
+      # Electron packaging must never publish directly from the builder process.
+      # Release publishing is centralized in the dedicated publish job below.
+      - name: Build desktop package
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run ${{ matrix.script }}
+
+      - name: Collect desktop artifacts
+        id: collect-desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          shopt -s nullglob
+          files=(
+            dist/*.AppImage
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest*.yml
+          )
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No desktop artifacts were produced."
+            find dist -maxdepth 2 -type f | sort
+            exit 1
+          fi
+
+          for file in "${files[@]}"; do
+            cp "$file" release-artifacts/
+          done
+
+          ls -lah release-artifacts
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "LedgerX ${{ github.ref_name }}"
-          releaseBody: "Automated release for ${{ github.ref_name }}"
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          name: ${{ matrix.artifact_name }}
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  android:
+    name: Android build
+    needs:
+      - quality
+    if: ${{ always() && (startsWith(github.ref, 'refs/tags/') || needs.quality.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager_bin="$(find "$ANDROID_SDK_ROOT/cmdline-tools" -mindepth 2 -maxdepth 2 -type f -name sdkmanager | sort | tail -1)"
+
+          if [ -z "$sdkmanager_bin" ]; then
+            echo "sdkmanager was not found in $ANDROID_SDK_ROOT/cmdline-tools"
+            exit 1
+          fi
+
+          echo "$(dirname "$sdkmanager_bin")" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+
+          yes | "$sdkmanager_bin" --licenses >/dev/null
+          "$sdkmanager_bin" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+      - name: Print tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          java -version
+          sdkmanager --version
+
+      - name: Install dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Validate Android signing configuration
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH_SECRET: ${{ secrets.ANDROID_KEYSTORE_PATH }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+
+          [ -n "${ANDROID_KEY_ALIAS}" ] || missing+=("ANDROID_KEY_ALIAS")
+          [ -n "${ANDROID_KEYSTORE_PASSWORD}" ] || missing+=("ANDROID_KEYSTORE_PASSWORD")
+          [ -n "${ANDROID_KEY_PASSWORD}" ] || missing+=("ANDROID_KEY_PASSWORD")
+
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ] && [ -z "${ANDROID_KEYSTORE_PATH_SECRET}" ]; then
+            missing+=("ANDROID_KEYSTORE_BASE64 or ANDROID_KEYSTORE_PATH")
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing Android signing secrets: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Prepare Android keystore
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH_SECRET: ${{ secrets.ANDROID_KEYSTORE_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
+            keystore_path="$RUNNER_TEMP/ledgerx-release.keystore"
+            echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "$keystore_path"
+          else
+            keystore_path="${ANDROID_KEYSTORE_PATH_SECRET}"
+          fi
+
+          if [ ! -f "$keystore_path" ]; then
+            echo "Resolved keystore path does not exist: $keystore_path"
+            exit 1
+          fi
+
+          chmod 600 "$keystore_path"
+          echo "ANDROID_KEYSTORE_PATH=$keystore_path" >> "$GITHUB_ENV"
+
+      - name: Build Android debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          npx cap sync android
+          cd android
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Build Android release artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./scripts/build-android-release.sh
+
+      - name: Collect Android artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          shopt -s nullglob
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            files=(
+              android/app/build/outputs/apk/release/*.apk
+              android/app/build/outputs/bundle/release/*.aab
+            )
+          else
+            files=(
+              android/app/build/outputs/apk/debug/*.apk
+            )
+          fi
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No Android artifacts were produced."
+            find android/app/build -maxdepth 6 -type f | sort || true
+            exit 1
+          fi
+
+          for file in "${files[@]}"; do
+            cp "$file" release-artifacts/
+          done
+
+          ls -lah release-artifacts
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ startsWith(github.ref, 'refs/tags/') && 'ledgerx-android-release' || 'ledgerx-android-debug' }}
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish-release:
+    name: Publish GitHub release
+    needs:
+      - desktop
+      - android
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ledgerx-*
+          path: release-artifacts
+
+      # Fail loudly if any expected asset is missing so that reruns cannot
+      # create an empty or partial release.
+      - name: Validate release payload
+        id: validate-release
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-artifacts -type f | sort
+
+          mapfile -t assets < <(find release-artifacts -type f \
+            \( -name '*.AppImage' -o -name '*.exe' -o -name '*.blockmap' -o -name '*.yml' -o -name '*.apk' -o -name '*.aab' \) | sort)
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release assets were downloaded."
+            exit 1
+          fi
+
+          sha256sum "${assets[@]}" > release-artifacts/SHA256SUMS.txt
+
+      - name: Create or update draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          title="LedgerX ${tag}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$title" --draft
+          else
+            gh release create "$tag" --title "$title" --draft --generate-notes --verify-tag
+          fi
+
+      - name: Upload release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          mapfile -t assets < <(find release-artifacts -type f | sort)
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No assets available for upload."
+            exit 1
+          fi
+
+          gh release upload "$tag" "${assets[@]}" --clobber
+          gh release view "$tag" --json assets,isDraft,name,tagName,url

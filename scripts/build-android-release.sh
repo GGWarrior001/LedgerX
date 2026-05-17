@@ -25,8 +25,24 @@ npm run build
 npx cap sync android
 
 cd "$PROJECT_ROOT/android"
-./gradlew bundleRelease
+./gradlew --no-daemon --stacktrace assembleRelease bundleRelease
+
+APK_PATH="$PROJECT_ROOT/android/app/build/outputs/apk/release/app-release.apk"
+AAB_PATH="$PROJECT_ROOT/android/app/build/outputs/bundle/release/app-release.aab"
+
+if [ ! -f "$APK_PATH" ]; then
+  echo "Signed release APK was not produced: $APK_PATH" >&2
+  exit 1
+fi
+
+if [ ! -f "$AAB_PATH" ]; then
+  echo "Signed release AAB was not produced: $AAB_PATH" >&2
+  exit 1
+fi
 
 echo
+echo "Signed release APK:"
+echo "$APK_PATH"
+echo
 echo "Signed release AAB:"
-echo "$PROJECT_ROOT/android/app/build/outputs/bundle/release/app-release.aab"
+echo "$AAB_PATH"
