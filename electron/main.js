@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net } = require('electron');
+const { app, BrowserWindow, protocol, net, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -33,7 +33,38 @@ function createWindow() {
     title: 'LedgerX',
   });
 
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedExternalUrl(url)) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedAppUrl(url)) {
+      event.preventDefault();
+    }
+  });
+
   win.loadURL('app://localhost/index.html');
+}
+
+function isAllowedAppUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'app:' && parsed.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedExternalUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 app.whenReady().then(() => {
@@ -43,14 +74,26 @@ app.whenReady().then(() => {
   // Unknown paths fall back to index.html so that the React Router SPA works.
   protocol.handle('app', (request) => {
     const { pathname } = new URL(request.url);
-    let filePath = path.join(distRoot, pathname);
+    const distRootResolved = path.resolve(distRoot);
+    let requestedPath = '/index.html';
+    try {
+      requestedPath = decodeURIComponent(pathname);
+    } catch {
+      requestedPath = '/index.html';
+    }
+    let filePath = path.resolve(distRootResolved, `.${requestedPath}`);
+
+    if (!filePath.startsWith(`${distRootResolved}${path.sep}`) && filePath !== distRootResolved) {
+      filePath = path.join(distRootResolved, 'index.html');
+    }
+
     try {
       if (fs.statSync(filePath).isDirectory()) {
-        filePath = path.join(distRoot, 'index.html');
+        filePath = path.join(distRootResolved, 'index.html');
       }
     } catch {
       // File does not exist; serve index.html for SPA client-side routing
-      filePath = path.join(distRoot, 'index.html');
+      filePath = path.join(distRootResolved, 'index.html');
     }
     return net.fetch(pathToFileURL(filePath).toString());
   });

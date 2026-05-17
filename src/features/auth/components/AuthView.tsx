@@ -1,21 +1,7 @@
 import { useState } from 'react';
-import { authService } from '../services/authService';
+import { authService, getAuthErrorMessage } from '../services/authService';
 import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
-
-const ERROR_MESSAGES: Record<string, string> = {
-  'auth/invalid-credential':    'Invalid email or password.',
-  'auth/user-not-found':        'No account found with this email.',
-  'auth/wrong-password':        'Incorrect password.',
-  'auth/email-already-in-use':  'An account with this email already exists.',
-  'auth/invalid-email':         'Please enter a valid email address.',
-  'auth/too-many-requests':     'Too many attempts. Please try again later.',
-  'auth/network-request-failed':'Network error. Please check your connection.',
-  'auth/operation-not-allowed': 'Email/password sign-in is not enabled.',
-  'auth/weak-password':         'Password is too weak. Please choose a stronger password.',
-  'auth/invalid-api-key':       'Authentication configuration error. Please contact support.',
-  'auth/app-not-authorized':    'This app is not authorized to use Firebase Authentication.',
-};
 
 export default function AuthView() {
   const mode                    = useAuthStore(s => s.authMode);
@@ -55,7 +41,7 @@ export default function AuthView() {
           closeAuthModal();
           toast.success('Welcome back!');
         } else {
-          const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
+          const msg = getAuthErrorMessage({ code: result.error });
           console.warn('[LedgerX] AuthPage – signIn failed:', result.error);
           setError(msg);
           toast.error(msg);
@@ -67,7 +53,7 @@ export default function AuthView() {
           closeAuthModal();
           toast.success('Account created! Welcome to LedgerX');
         } else {
-          const msg = ERROR_MESSAGES[result.error ?? ''] ?? 'Something went wrong. Please try again.';
+          const msg = getAuthErrorMessage({ code: result.error });
           console.warn('[LedgerX] AuthPage – signUp failed:', result.error);
           setError(msg);
           toast.error(msg);

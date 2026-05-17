@@ -1,60 +1,51 @@
-/**
- * src/test/storage.test.ts
- *
- * Phase 4 — Encryption, unlock, and fallback tests for src/lib/storage.ts
- *
- * Coverage targets:
- *   - setup → unlock → save → load → lock → load fails
- *   - invalid passcode returns false
- *   - fallback to plaintext when encryption is disabled
- */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// StorageService is a singleton; we test via the exported `storage` instance.
-// We re-require it for each test to get a fresh localStorage state.
+async function freshStorage() {
+  vi.resetModules();
+  return import('@/lib/storage');
+}
 
 describe('StorageService', () => {
   beforeEach(() => {
     localStorage.clear();
-    // Re-create the module instance by invalidating its state
-    // (localStorage.clear() resets all persisted flags)
+    vi.resetModules();
   });
 
   it('returns false when no encryption is set up', async () => {
-    // Dynamic import to get a fresh instance after localStorage.clear()
-    const { storage } = await import('@/lib/storage');
+    const { storage } = await freshStorage();
     expect(storage.isEncryptionSetup()).toBe(false);
   });
 
   it('sets up encryption and marks as setup', async () => {
-    const { storage } = await import('@/lib/storage');
+    const { storage } = await freshStorage();
     storage.setupEncryption('mySecurePasscode123');
     expect(storage.isEncryptionSetup()).toBe(true);
   });
 
   it('unlock succeeds with correct passcode', async () => {
-    const { storage } = await import('@/lib/storage');
+    const { storage } = await freshStorage();
     storage.setupEncryption('mySecurePasscode123');
-    // clearEncryptionKey simulates a lock
     storage.clearEncryptionKey();
-    const result = storage.unlock('mySecurePasscode123');
-    expect(result).toBe(true);
+    expect(storage.unlock('mySecurePasscode123')).toBe(true);
   });
 
   it('unlock returns false for invalid passcode', async () => {
-    const { storage } = await import('@/lib/storage');
+    const { storage } = await freshStorage();
     storage.setupEncryption('mySecurePasscode123');
     storage.clearEncryptionKey();
-    const result = storage.unlock('wrongpassword');
-    expect(result).toBe(false);
+    expect(storage.unlock('wrongpassword')).toBe(false);
   });
 
-  it('save → load cycle works after setup and unlock', async () => {
-    const { storage } = await import('@/lib/storage');
+  it('save and load cycle works after setup and unlock', async () => {
+    const { storage } = await freshStorage();
     storage.setupEncryption('mySecurePasscode123');
 
     const testData = { invoices: [{ id: 1, amount: 1000 }] };
     storage.save('lx_test_data', testData);
+
+    const raw = localStorage.getItem('lx_test_data') ?? '';
+    expect(raw).toContain('__ledgerx_encrypted');
+    expect(raw).not.toContain('1000');
 
     const loaded = storage.load<typeof testData>('lx_test_data', { invoices: [] });
     expect(loaded.invoices).toHaveLength(1);
@@ -62,36 +53,59 @@ describe('StorageService', () => {
   });
 
   it('load returns default value when key does not exist', async () => {
-    const { storage } = await import('@/lib/storage');
-    const result = storage.load<string[]>('lx_nonexistent', []);
-    expect(result).toEqual([]);
+    const { storage } = await freshStorage();
+    expect(storage.load<string[]>('lx_nonexistent', [])).toEqual([]);
   });
 
-  it('data is not readable after key is cleared (lock)', async () => {
-    const { storage } = await import('@/lib/storage');
+  it('does not write plaintext while encrypted storage is locked', async () => {
+    const { storage } = await freshStorage();
+    storage.setupEncryption('mySecurePasscode123');
+    storage.save('lx_sensitive', { secret: 'value' });
+    const encryptedRaw = localStorage.getItem('lx_sensitive');
+
+    storage.clearEncryptionKey();
+    expect(() => storage.save('lx_sensitive', { secret: 'new value' })).toThrow('Refusing plaintext write');
+    expect(localStorage.getItem('lx_sensitive')).toBe(encryptedRaw);
+    expect(localStorage.getItem('lx_sensitive')).not.toContain('new value');
+  });
+
+  it('preserves encrypted data across lock and unlock', async () => {
+    const { storage } = await freshStorage();
     storage.setupEncryption('mySecurePasscode123');
     storage.save('lx_sensitive', { secret: 'value' });
 
-    // Simulate locking: clear the in-memory key
     storage.clearEncryptionKey();
+    expect(() => storage.load('lx_sensitive', { secret: '' })).toThrow('Encrypted storage is locked');
 
-    // After locking, load should return the default (encrypted blob cannot be parsed)
-    const result = storage.load<{ secret: string }>('lx_sensitive', { secret: '' });
-    // When locked, decrypt returns the raw encrypted string, JSON.parse throws, falls back to default
-    expect(result.secret).toBe('');
+    expect(storage.unlock('mySecurePasscode123')).toBe(true);
+    expect(storage.load('lx_sensitive', { secret: '' })).toEqual({ secret: 'value' });
   });
 
-  it('plaintext fallback when encryption is not enabled', async () => {
-    const { storage } = await import('@/lib/storage');
-    // No encryption setup
+  it('does not overwrite encrypted profile defaults during locked app boot', async () => {
+    let module = await freshStorage();
+    module.storage.save('lx_profile', { name: 'Asha', role: 'Admin', city: 'Pune', businessName: 'Asha Co', fiscalYear: 'Apr-Mar', currency: '₹', dataChoice: 'fresh' });
+    module.storage.setupEncryption('mySecurePasscode123');
+    module.storage.clearEncryptionKey();
+    const encryptedProfile = localStorage.getItem('lx_profile');
+
+    vi.resetModules();
+    const { useAppStore } = await import('@/shared/stores/useAppStore');
+    expect(useAppStore.getState().locked).toBe(true);
+    useAppStore.getState().ensureProfile();
+
+    expect(localStorage.getItem('lx_profile')).toBe(encryptedProfile);
+
+    module = await import('@/lib/storage');
+    expect(module.storage.unlock('mySecurePasscode123')).toBe(true);
+    expect(module.storage.load('lx_profile', null)).toMatchObject({ name: 'Asha' });
+  });
+
+  it('plaintext fallback works when encryption is not enabled', async () => {
+    const { storage } = await freshStorage();
     expect(storage.isEncryptionSetup()).toBe(false);
 
     storage.save('lx_plain', { value: 42 });
-    const result = storage.load<{ value: number }>('lx_plain', { value: 0 });
-    expect(result.value).toBe(42);
-
-    // Verify it's stored as plain JSON in localStorage
-    const raw = localStorage.getItem('lx_plain');
-    expect(raw).toBe(JSON.stringify({ value: 42 }));
+    expect(storage.load<{ value: number }>('lx_plain', { value: 0 }).value).toBe(42);
+    expect(localStorage.getItem('lx_plain')).toBe(JSON.stringify({ value: 42 }));
   });
 });

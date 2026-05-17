@@ -23,6 +23,35 @@ import { useVendorStore }  from '@/features/vendors/store/useVendorStore';
 import { useAppStore }     from '../stores/useAppStore';
 
 export const dataService = {
+  loadFromStorage(): void {
+    const invoices = storage.load<Invoice[]>('lx_invoices', []);
+    const expenses = storage.load<Expense[]>('lx_expenses', []);
+    const clients = storage.load<Client[]>('lx_clients', []);
+    const vendors = storage.load<Vendor[]>('lx_vendors', []);
+
+    useInvoiceStore.getState().hydrate(invoices, storage.load<number>('lx_inv_id', invoices.length + 1));
+    useExpenseStore.getState().hydrate(expenses, storage.load<number>('lx_exp_id', expenses.length + 1));
+    useClientStore.getState().hydrate(clients, storage.load<number>('lx_cli_id', clients.length + 1));
+    useVendorStore.getState().hydrate(vendors, storage.load<number>('lx_ven_id', vendors.length + 1));
+    useAppStore.getState().setNotifications(storage.load('lx_notifs', []));
+  },
+
+  exportData(): {
+    invoices: Invoice[];
+    expenses: Expense[];
+    clients: Client[];
+    vendors: Vendor[];
+    profile: Profile | null;
+  } {
+    return {
+      invoices: storage.exportData<Invoice[]>('lx_invoices', []),
+      expenses: storage.exportData<Expense[]>('lx_expenses', []),
+      clients: storage.exportData<Client[]>('lx_clients', []),
+      vendors: storage.exportData<Vendor[]>('lx_vendors', []),
+      profile: storage.exportData<Profile | null>('lx_profile', null),
+    };
+  },
+
   /** Clears all transactional data; keeps profile, dark, encryption keys. */
   resetData(): void {
     storage.clearAppData();

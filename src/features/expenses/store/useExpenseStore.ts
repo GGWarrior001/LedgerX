@@ -2,7 +2,7 @@
  * useExpenseStore – Zustand store for the Expenses domain.
  */
 import { create } from 'zustand';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import type { Expense } from '@/lib/types';
 
 interface ExpenseStoreState {
@@ -14,9 +14,18 @@ interface ExpenseStoreState {
   reset:      () => void;
 }
 
+function loadStored<T>(key: string, defaultValue: T): T {
+  try {
+    return storage.load<T>(key, defaultValue);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return defaultValue;
+    throw err;
+  }
+}
+
 export const useExpenseStore = create<ExpenseStoreState>((set, get) => ({
-  expenses:  storage.load<Expense[]>('lx_expenses', []),
-  nextExpId: storage.load<number>('lx_exp_id', 1),
+  expenses:  loadStored<Expense[]>('lx_expenses', []),
+  nextExpId: loadStored<number>('lx_exp_id', 1),
 
   addExpense: (exp) => {
     const { nextExpId, expenses } = get();

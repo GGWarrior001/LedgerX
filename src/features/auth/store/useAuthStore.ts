@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import type { User } from 'firebase/auth';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import type { LocalUser } from '@/lib/types';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -32,9 +32,18 @@ interface AuthStoreState {
   closeAuthModal: () => void;
 }
 
+function loadLocalUser(): LocalUser {
+  try {
+    return storage.load<LocalUser>('lx_local_user', DEFAULT_LOCAL_USER);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return DEFAULT_LOCAL_USER;
+    throw err;
+  }
+}
+
 export const useAuthStore = create<AuthStoreState>((set) => ({
   user:       null,
-  localUser:  storage.load<LocalUser>('lx_local_user', DEFAULT_LOCAL_USER),
+  localUser:  loadLocalUser(),
   loading:    true,
   error:      null,
   authModalOpen: false,
@@ -43,6 +52,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   setLoading: (loading) => set({ loading }),
   setError:   (error)   => set({ error }),
   initializeGuestSession: () => {
+    if (storage.isEncryptionSetup() && !storage.isUnlocked()) return;
     storage.save('lx_local_user', DEFAULT_LOCAL_USER);
     set({ localUser: DEFAULT_LOCAL_USER });
   },

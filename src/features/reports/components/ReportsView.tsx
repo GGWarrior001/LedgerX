@@ -2,6 +2,7 @@ import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
 import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { fmt, currentFY } from '@/lib/constants';
+import { downloadBlob, toCsv } from '@/shared/utils/csv';
 
 export default function ReportsView() {
   const invoices    = useInvoiceStore(s => s.invoices);
@@ -35,11 +36,7 @@ export default function ReportsView() {
   const exportCSV = () => {
     const rows = [['Invoice #', 'Client', 'Issue Date', 'Due Date', 'Status', 'Amount']];
     invoices.forEach(i => rows.push([i.number, i.clientName, i.issueDate, i.dueDate, i.status, String(i.amount)]));
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'ledgerx-invoices.csv';
-    a.click();
+    downloadBlob('ledgerx-invoices.csv', new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
   };
 
   return (

@@ -10,27 +10,11 @@
  */
 import { useInvoiceStore } from '../store/useInvoiceStore';
 import { useClientStore }  from '@/features/clients/store/useClientStore';
-import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
-import { useVendorStore }  from '@/features/vendors/store/useVendorStore';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { useAuthStore }    from '@/features/auth/store/useAuthStore';
-import {
-  addLedgerEntry,
-  saveCloudData,
-} from '@/shared/services/firestoreService';
+import { addLedgerEntry } from '@/shared/services/firestoreService';
+import { pushCloudSnapshot } from '@/shared/services/cloudSnapshot';
 import type { Invoice } from '@/lib/types';
-
-function pushCloudSnapshot(uid: string): void {
-  const { invoices, nextInvId }   = useInvoiceStore.getState();
-  const { expenses, nextExpId }   = useExpenseStore.getState();
-  const { clients, nextClientId } = useClientStore.getState();
-  const { vendors, nextVendorId } = useVendorStore.getState();
-  const { profile }               = useAppStore.getState();
-  saveCloudData(uid, {
-    invoices, expenses, clients, vendors, profile,
-    nextInvId, nextExpId, nextClientId, nextVendorId,
-  }).catch(() => {});
-}
 
 export const invoiceService = {
   addInvoice(
@@ -41,10 +25,10 @@ export const invoiceService = {
     const newInv  = useInvoiceStore.getState().addInvoice(inv, clients);
 
     // 2. Update client stats
-    useClientStore.getState().updateClientStats(
+    useClientStore.getState().updateClientBilling(
       inv.clientName,
       inv.amount,
-      inv.status === 'sent',
+      inv.status,
     );
 
     // 3. Rebuild notifications

@@ -3,6 +3,7 @@ import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { fmt, fmtDate, getGreeting, EXPENSE_CATEGORIES } from '@/lib/constants';
 import type { Expense, Invoice } from '@/lib/types';
+import { downloadBlob, toCsv } from '@/shared/utils/csv';
 
 type RecentInvoice = Invoice & { _type: 'invoice'; _date: Date };
 type RecentExpense = Expense & { _type: 'expense'; _date: Date };
@@ -41,15 +42,30 @@ export default function DashboardView() {
   const topExp = [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
   const maxExp = topExp[0]?.amount || 1;
   const catEmojis: Record<string, string> = Object.fromEntries(EXPENSE_CATEGORIES.map(c => [c.name, c.emoji]));
+  const monthlyChart = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (5 - i));
+    const mo = d.getMonth();
+    const yr = d.getFullYear();
+    const revenue = invoices
+      .filter(inv => inv.status === 'paid' && new Date(inv.issueDate).getMonth() === mo && new Date(inv.issueDate).getFullYear() === yr)
+      .reduce((a, inv) => a + inv.amount, 0);
+    const expense = expenses
+      .filter(ex => new Date(ex.date).getMonth() === mo && new Date(ex.date).getFullYear() === yr)
+      .reduce((a, ex) => a + ex.amount, 0);
+    return {
+      label: d.toLocaleDateString('en-IN', { month: 'short' }),
+      revenue,
+      expense,
+    };
+  });
+  const monthlyScale = 160 / Math.max(1, ...monthlyChart.map(m => Math.max(m.revenue, m.expense)));
 
   const exportCSV = () => {
     const rows = [['Invoice #', 'Client', 'Issue Date', 'Due Date', 'Status', 'Amount']];
     invoices.forEach(i => rows.push([i.number, i.clientName, i.issueDate, i.dueDate, i.status, String(i.amount)]));
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'ledgerx-invoices.csv';
-    a.click();
+    downloadBlob('ledgerx-invoices.csv', new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
   };
 
   return (
@@ -146,28 +162,15 @@ export default function DashboardView() {
             </span>
           </div>
           <div className="h-[180px] flex items-end gap-2">
-            {Array.from({ length: 6 }).map((_, i) => {
-              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
-              const mo = d.getMonth(); const yr = d.getFullYear();
-              const r = invoices.filter(inv => inv.status === 'paid' && new Date(inv.issueDate).getMonth() === mo && new Date(inv.issueDate).getFullYear() === yr).reduce((a, inv) => a + inv.amount, 0);
-              const e = expenses.filter(ex => new Date(ex.date).getMonth() === mo && new Date(ex.date).getFullYear() === yr).reduce((a, ex) => a + ex.amount, 0);
-              const scale = 160 / Math.max(...Array.from({ length: 6 }).map((_, j) => {
-                const dd = new Date(); dd.setDate(1); dd.setMonth(dd.getMonth() - (5 - j));
-                const mm = dd.getMonth(); const yy = dd.getFullYear();
-                return Math.max(
-                  invoices.filter(inv => inv.status === 'paid' && new Date(inv.issueDate).getMonth() === mm && new Date(inv.issueDate).getFullYear() === yy).reduce((a, inv) => a + inv.amount, 0),
-                  expenses.filter(ex => new Date(ex.date).getMonth() === mm && new Date(ex.date).getFullYear() === yy).reduce((a, ex) => a + ex.amount, 0),
-                  1,
-                );
-              }));
+            {monthlyChart.map((month, i) => {
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div className="flex gap-0.5 items-end w-full justify-center" style={{ height: 160 }}>
-                    <div className="w-[22px] rounded-t-md transition-all" style={{ height: Math.max(r * scale, 2), background: '#6366F1' }} />
-                    <div className="w-[22px] rounded-t-md transition-all" style={{ height: Math.max(e * scale, 2), background: '#FDA4AF' }} />
+                    <div className="w-[22px] rounded-t-md transition-all" style={{ height: Math.max(month.revenue * monthlyScale, 2), background: '#6366F1' }} />
+                    <div className="w-[22px] rounded-t-md transition-all" style={{ height: Math.max(month.expense * monthlyScale, 2), background: '#FDA4AF' }} />
                   </div>
                   <span className="text-[10px] text-muted-foreground">
-                    {d.toLocaleDateString('en-IN', { month: 'short' })}
+                    {month.label}
                   </span>
                 </div>
               );

@@ -5,6 +5,7 @@ import { authService }  from '@/features/auth/services/authService';
 import { dataService }  from '@/shared/services/dataService';
 import { FY_OPTIONS, CURRENCY_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
+import { downloadBlob } from '@/shared/utils/csv';
 
 export default function SettingsView() {
   const profile         = useAppStore(s => s.profile);
@@ -60,20 +61,16 @@ export default function SettingsView() {
   };
 
   const exportData = () => {
-    const data = {
-      invoices: JSON.parse(localStorage.getItem('lx_invoices') || '[]'),
-      expenses: JSON.parse(localStorage.getItem('lx_expenses') || '[]'),
-      clients:  JSON.parse(localStorage.getItem('lx_clients')  || '[]'),
-      vendors:  JSON.parse(localStorage.getItem('lx_vendors')  || '[]'),
-      profile:  JSON.parse(localStorage.getItem('lx_profile')  || '{}'),
-    };
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(
-      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    );
-    a.download = 'ledgerx-backup.json';
-    a.click();
-    toast.success('Data exported successfully');
+    try {
+      const data = dataService.exportData();
+      downloadBlob(
+        'ledgerx-backup.json',
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      toast.success('Data exported successfully');
+    } catch {
+      toast.error('Export failed. Unlock encrypted data and try again.');
+    }
   };
 
   return (

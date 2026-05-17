@@ -21,8 +21,9 @@ import { useVendorStore }    from '@/features/vendors/store/useVendorStore';
 import {
   fetchCloudData,
   fetchLedgerEntries,
-  saveCloudData,
 } from '@/shared/services/firestoreService';
+import { pushCloudSnapshot } from '@/shared/services/cloudSnapshot';
+import { dataService } from '@/shared/services/dataService';
 
 import Sidebar    from '@/components/layout/Sidebar';
 import Topbar     from '@/components/layout/Topbar';
@@ -73,31 +74,12 @@ function mergeLocalExpensesWithCloud(
   };
 }
 
-function pushCloudSnapshot(uid: string): void {
-  const { invoices, nextInvId }   = useInvoiceStore.getState();
-  const { expenses, nextExpId }   = useExpenseStore.getState();
-  const { clients, nextClientId } = useClientStore.getState();
-  const { vendors, nextVendorId } = useVendorStore.getState();
-  const { profile }               = useAppStore.getState();
-
-  saveCloudData(uid, {
-    invoices,
-    expenses,
-    clients,
-    vendors,
-    profile,
-    nextInvId,
-    nextExpId,
-    nextClientId,
-    nextVendorId,
-  }).catch(() => {});
-}
-
 // ── Inner component rendered after the user is authenticated ─────────────────
 
 function AppContent() {
   const { activeView, locked, settings, lock } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const wasLocked = useRef(locked);
 
   // Auto-lock on inactivity
   const lastActivity = useRef(Date.now());
@@ -118,6 +100,13 @@ function AppContent() {
       clearInterval(interval);
     };
   }, [locked, settings.sessionTimeout, lock]);
+
+  useEffect(() => {
+    if (wasLocked.current && !locked && storage.isEncryptionSetup()) {
+      dataService.loadFromStorage();
+    }
+    wasLocked.current = locked;
+  }, [locked]);
 
   if (locked) return <AutoLock />;
 
@@ -145,7 +134,7 @@ export default function AppShell() {
     authModalOpen,
     initializeGuestSession,
   } = useAuthStore();
-  const { profile, setProfile, ensureProfile } = useAppStore();
+  const { profile, setProfile, ensureProfile, locked } = useAppStore();
   const { hydrate: hydrateInvoices }  = useInvoiceStore();
   const { hydrate: hydrateExpenses }  = useExpenseStore();
   const { hydrate: hydrateClients }   = useClientStore();
@@ -160,16 +149,19 @@ export default function AppShell() {
 
   useEffect(() => {
     if (loading) return;
+    if (locked) return;
     if (!user) initializeGuestSession();
-  }, [initializeGuestSession, loading, user]);
+  }, [initializeGuestSession, loading, locked, user]);
 
   useEffect(() => {
+    if (locked) return;
     if (!profile) ensureProfile();
-  }, [ensureProfile, profile]);
+  }, [ensureProfile, locked, profile]);
 
   // Cloud hydration whenever the user changes
   const prevUid = useRef<string | null | undefined>(undefined);
   useEffect(() => {
+    if (locked) return;
     if (user?.uid === prevUid.current) return;
     prevUid.current = user?.uid ?? null;
     if (!user?.uid) return;
@@ -222,7 +214,17 @@ export default function AppShell() {
     }).catch(err => {
       console.error('[LedgerX] Cloud sync error:', err);
     });
-  }, [profile, rebuildNotifications, setProfile, user]);   // Zustand actions are stable; user.uid drives the effect
+  }, [
+    hydrateClients,
+    hydrateExpenses,
+    hydrateInvoices,
+    hydrateVendors,
+    locked,
+    profile,
+    rebuildNotifications,
+    setProfile,
+    user,
+  ]);
 
   // Auth loading splash
   if (loading) {

@@ -7,7 +7,7 @@
  *   - Provide `hydrate` for cloud sync and `reset` for data clear
  */
 import { create } from 'zustand';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import { getInitials } from '@/lib/constants';
 import type { Invoice, Client } from '@/lib/types';
 
@@ -24,9 +24,18 @@ interface InvoiceStoreState {
   reset:   () => void;
 }
 
+function loadStored<T>(key: string, defaultValue: T): T {
+  try {
+    return storage.load<T>(key, defaultValue);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return defaultValue;
+    throw err;
+  }
+}
+
 export const useInvoiceStore = create<InvoiceStoreState>((set, get) => ({
-  invoices:  storage.load<Invoice[]>('lx_invoices', []),
-  nextInvId: storage.load<number>('lx_inv_id', 1),
+  invoices:  loadStored<Invoice[]>('lx_invoices', []),
+  nextInvId: loadStored<number>('lx_inv_id', 1),
 
   addInvoice: (inv, clients) => {
     const { nextInvId, invoices } = get();

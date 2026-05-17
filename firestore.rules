@@ -1,13 +1,115 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Cloud data snapshot — one document per user
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
+
+    function isString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function isNonNegativeNumber(value) {
+      return value is number && value >= 0 && value <= 1000000000;
+    }
+
+    function isDateString(value) {
+      return isString(value, 32);
+    }
+
+    function validProfile(profile) {
+      return profile == null || (
+        profile is map &&
+        profile.keys().hasOnly(['name', 'role', 'city', 'businessName', 'fiscalYear', 'currency', 'dataChoice']) &&
+        isString(profile.name, 120) &&
+        isString(profile.role, 80) &&
+        isString(profile.city, 120) &&
+        isString(profile.businessName, 160) &&
+        isString(profile.fiscalYear, 20) &&
+        isString(profile.currency, 8) &&
+        isString(profile.dataChoice, 40)
+      );
+    }
+
+    function validSnapshot() {
+      return request.resource.data.keys().hasOnly([
+        'invoices',
+        'expenses',
+        'clients',
+        'vendors',
+        'profile',
+        'nextInvId',
+        'nextExpId',
+        'nextClientId',
+        'nextVendorId',
+        'updatedAt'
+      ]) &&
+      request.resource.data.invoices is list &&
+      request.resource.data.expenses is list &&
+      request.resource.data.clients is list &&
+      request.resource.data.vendors is list &&
+      validProfile(request.resource.data.profile) &&
+      request.resource.data.nextInvId is int &&
+      request.resource.data.nextExpId is int &&
+      request.resource.data.nextClientId is int &&
+      request.resource.data.nextVendorId is int &&
+      request.resource.data.nextInvId >= 1 &&
+      request.resource.data.nextExpId >= 1 &&
+      request.resource.data.nextClientId >= 1 &&
+      request.resource.data.nextVendorId >= 1;
+    }
+
+    function validInvoice(data) {
+      return data is map &&
+        data.keys().hasOnly(['id', 'number', 'clientName', 'clientInitials', 'clientColor', 'description', 'issueDate', 'dueDate', 'status', 'amount']) &&
+        data.id is int &&
+        data.id >= 1 &&
+        isString(data.number, 40) &&
+        isString(data.clientName, 160) &&
+        isString(data.clientInitials, 12) &&
+        isString(data.clientColor, 24) &&
+        isString(data.description, 500) &&
+        isDateString(data.issueDate) &&
+        isDateString(data.dueDate) &&
+        data.status in ['draft', 'sent', 'paid', 'overdue'] &&
+        isNonNegativeNumber(data.amount);
+    }
+
+    function validExpense(data, userId) {
+      return data is map &&
+        data.keys().hasOnly(['id', 'description', 'category', 'vendor', 'date', 'receipt', 'amount', 'user_id']) &&
+        data.id is int &&
+        data.id >= 1 &&
+        isString(data.description, 500) &&
+        isString(data.category, 120) &&
+        isString(data.vendor, 160) &&
+        isDateString(data.date) &&
+        data.receipt in ['attached', 'pending'] &&
+        isNonNegativeNumber(data.amount) &&
+        (!('user_id' in data) || data.user_id == userId || data.user_id == 'local');
+    }
+
+    function validLedgerEntry(userId) {
+      return request.resource.data.keys().hasOnly(['entryType', 'data', 'createdAt']) &&
+        request.resource.data.entryType in ['invoice', 'expense'] &&
+        (
+          (request.resource.data.entryType == 'invoice' && validInvoice(request.resource.data.data)) ||
+          (request.resource.data.entryType == 'expense' && validExpense(request.resource.data.data, userId))
+        );
+    }
+
+    // Cloud data snapshot — one document per user
+    match /users/{userId} {
+      allow read: if signedInAs(userId);
+      allow create, update: if signedInAs(userId) && validSnapshot();
+      allow delete: if false;
+    }
+
     // Append-only ledger entries sub-collection
     match /ledgers/{userId}/entries/{entryId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if signedInAs(userId);
+      allow create: if signedInAs(userId) && validLedgerEntry(userId);
+      allow update, delete: if false;
     }
   }
 }

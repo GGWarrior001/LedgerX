@@ -2,7 +2,7 @@
  * useVendorStore – Zustand store for the Vendors domain.
  */
 import { create } from 'zustand';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import { getInitials } from '@/lib/constants';
 import type { Vendor } from '@/lib/types';
 
@@ -19,13 +19,23 @@ interface VendorStoreState {
     ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>
   ) => Vendor;
 
+  updateVendorSpending: (vendorName: string, amount: number) => void;
   hydrate: (vendors: Vendor[], nextId: number) => void;
   reset:   () => void;
 }
 
+function loadStored<T>(key: string, defaultValue: T): T {
+  try {
+    return storage.load<T>(key, defaultValue);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return defaultValue;
+    throw err;
+  }
+}
+
 export const useVendorStore = create<VendorStoreState>((set, get) => ({
-  vendors:      storage.load<Vendor[]>('lx_vendors', []),
-  nextVendorId: storage.load<number>('lx_ven_id', 1),
+  vendors:      loadStored<Vendor[]>('lx_vendors', []),
+  nextVendorId: loadStored<number>('lx_ven_id', 1),
 
   addVendor: (ven) => {
     const { nextVendorId, vendors } = get();
@@ -43,6 +53,17 @@ export const useVendorStore = create<VendorStoreState>((set, get) => ({
     storage.save('lx_vendors', newVendors);
     storage.save('lx_ven_id', newId);
     return newVendor;
+  },
+
+  updateVendorSpending: (vendorName, amount) => {
+    if (!vendorName.trim()) return;
+    set(s => {
+      const vendors = s.vendors.map(v => (
+        v.name === vendorName ? { ...v, totalSpent: v.totalSpent + amount } : v
+      ));
+      storage.save('lx_vendors', vendors);
+      return { vendors };
+    });
   },
 
   hydrate: (vendors, nextId) => {

@@ -9,7 +9,7 @@
  *   - In-app notifications (derived from invoice statuses)
  */
 import { create } from 'zustand';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import type { Profile, Notification, AppSettings, ViewId, Invoice } from '@/lib/types';
 
 export const DEFAULT_PROFILE: Profile = {
@@ -83,21 +83,36 @@ interface AppStoreState {
 const initialDark = localStorage.getItem('lx_dark') === '1';
 if (initialDark) document.documentElement.classList.add('dark');
 
+function loadStored<T>(key: string, defaultValue: T): T {
+  try {
+    return storage.load<T>(key, defaultValue);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return defaultValue;
+    throw err;
+  }
+}
+
+function canPersistEncryptedData(): boolean {
+  return !storage.isEncryptionSetup() || storage.isUnlocked();
+}
+
 export const useAppStore = create<AppStoreState>((set) => ({
-  profile:       storage.load<Profile | null>('lx_profile', null),
+  profile:       loadStored<Profile | null>('lx_profile', null),
   dark:          initialDark,
   privacyMode:   false,
   locked:        storage.isEncryptionSetup() && !storage.isUnlocked(),
   activeView:    'dashboard',
-  settings:      storage.load<AppSettings>('lx_settings', DEFAULT_SETTINGS),
-  notifications: storage.load<Notification[] | null>('lx_notifs', null) ?? [],
+  settings:      loadStored<AppSettings>('lx_settings', DEFAULT_SETTINGS),
+  notifications: loadStored<Notification[] | null>('lx_notifs', null) ?? [],
 
   setProfile: (profile) => {
+    if (!canPersistEncryptedData()) return;
     storage.save('lx_profile', profile);
     set({ profile });
   },
 
   saveSettings: (partial) => {
+    if (!canPersistEncryptedData()) return;
     set(s => {
       const profile = { ...(s.profile ?? DEFAULT_PROFILE), ...partial };
       storage.save('lx_profile', profile);
@@ -106,6 +121,7 @@ export const useAppStore = create<AppStoreState>((set) => ({
   },
 
   ensureProfile: () => {
+    if (!canPersistEncryptedData()) return;
     set(s => {
       if (s.profile) return s;
       storage.save('lx_profile', DEFAULT_PROFILE);
@@ -136,10 +152,15 @@ export const useAppStore = create<AppStoreState>((set) => ({
 
   setupEncryption: (passcode) => {
     storage.setupEncryption(passcode);
-    set(s => ({ settings: { ...s.settings, encryptionEnabled: true } }));
+    set(s => {
+      const settings = { ...s.settings, encryptionEnabled: true };
+      storage.save('lx_settings', settings);
+      return { settings };
+    });
   },
 
   markNotifRead: (id) => {
+    if (!canPersistEncryptedData()) return;
     set(s => {
       const notifications = s.notifications.map(n => n.id === id ? { ...n, read: true } : n);
       storage.save('lx_notifs', notifications);
@@ -148,6 +169,7 @@ export const useAppStore = create<AppStoreState>((set) => ({
   },
 
   markAllRead: () => {
+    if (!canPersistEncryptedData()) return;
     set(s => {
       const notifications = s.notifications.map(n => ({ ...n, read: true }));
       storage.save('lx_notifs', notifications);
@@ -156,11 +178,13 @@ export const useAppStore = create<AppStoreState>((set) => ({
   },
 
   setNotifications: (notifications) => {
+    if (!canPersistEncryptedData()) return;
     storage.save('lx_notifs', notifications);
     set({ notifications });
   },
 
   rebuildNotifications: (invoices) => {
+    if (!canPersistEncryptedData()) return;
     const notifications = buildNotifications(invoices);
     storage.save('lx_notifs', notifications);
     set({ notifications });

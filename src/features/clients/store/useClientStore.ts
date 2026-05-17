@@ -8,7 +8,7 @@
  *     billed / outstanding figures in sync after an invoice is created
  */
 import { create } from 'zustand';
-import { storage } from '@/lib/storage';
+import { StorageLockedError, storage } from '@/lib/storage';
 import { getInitials } from '@/lib/constants';
 import type { Client } from '@/lib/types';
 
@@ -44,9 +44,18 @@ interface ClientStoreState {
   reset:      () => void;
 }
 
+function loadStored<T>(key: string, defaultValue: T): T {
+  try {
+    return storage.load<T>(key, defaultValue);
+  } catch (err) {
+    if (err instanceof StorageLockedError) return defaultValue;
+    throw err;
+  }
+}
+
 export const useClientStore = create<ClientStoreState>((set, get) => ({
-  clients:      storage.load<Client[]>('lx_clients', []),
-  nextClientId: storage.load<number>('lx_cli_id', 1),
+  clients:      loadStored<Client[]>('lx_clients', []),
+  nextClientId: loadStored<number>('lx_cli_id', 1),
 
   addClient: (cli) => {
     const { nextClientId, clients } = get();

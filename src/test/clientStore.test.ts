@@ -59,6 +59,16 @@ describe('useClientStore', () => {
     expect(acme?.invoices).toBe(1);
   });
 
+  it('treats overdue invoices as outstanding billing', () => {
+    useClientStore.getState().addClient({ name: 'Acme', city: 'NYC', email: 'a@acme.com', phone: '' });
+    useClientStore.getState().updateClientBilling('Acme', 7000, 'overdue');
+
+    const acme = useClientStore.getState().clients.find(c => c.name === 'Acme');
+    expect(acme?.billed).toBe(7000);
+    expect(acme?.outstanding).toBe(7000);
+    expect(acme?.invoices).toBe(1);
+  });
+
   it('setClients replaces the entire list', () => {
     const newClients = [
       { id: 10, name: 'X', initials: 'X', color: '#000', city: '', email: '', phone: '', billed: 0, outstanding: 0, invoices: 0 },
