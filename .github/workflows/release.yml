@@ -26,7 +26,6 @@ jobs:
             mobile: ""
           - name: Android
             platform: ubuntu-latest
-            args: "--apk"
             mobile: "android"
 
     steps:
@@ -39,9 +38,14 @@ jobs:
           node-version: lts/*
 
       - name: Install Rust stable
+        if: matrix.mobile != 'android'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust stable with Android targets
+        if: matrix.mobile == 'android'
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || '' }}
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
       - name: Install Linux desktop dependencies
         if: matrix.platform == 'ubuntu-latest' && matrix.mobile != 'android'
@@ -98,5 +102,5 @@ jobs:
           releaseBody: "Automated release for ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: --apk
           mobile: android
