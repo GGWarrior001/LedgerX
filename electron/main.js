@@ -28,6 +28,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
     icon: path.join(__dirname, '../public/favicon.ico'),
     title: 'LedgerX',
@@ -35,9 +38,13 @@ function createWindow() {
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedExternalUrl(url)) {
-      shell.openExternal(url);
+      shell.openExternal(url).catch(() => {});
     }
     return { action: 'deny' };
+  });
+
+  win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false);
   });
 
   win.webContents.on('will-navigate', (event, url) => {

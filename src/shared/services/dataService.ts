@@ -16,6 +16,14 @@ import {
   DEFAULT_VENDORS,
 } from '@/lib/constants';
 import type { Invoice, Expense, Client, Vendor, Profile } from '@/lib/types';
+import {
+  safeNextId,
+  sanitizeClients,
+  sanitizeExpenses,
+  sanitizeInvoices,
+  sanitizeProfile,
+  sanitizeVendors,
+} from '@/lib/validation';
 import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
 import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useClientStore }  from '@/features/clients/store/useClientStore';
@@ -86,28 +94,28 @@ export const dataService = {
   /** Imports data from a JSON backup, merging with current state where needed. */
   importData(data: Record<string, unknown>): void {
     const invoices = Array.isArray(data.invoices)
-      ? (data.invoices as Invoice[])
+      ? sanitizeInvoices(data.invoices)
       : useInvoiceStore.getState().invoices;
 
     const expenses = Array.isArray(data.expenses)
-      ? (data.expenses as Expense[])
+      ? sanitizeExpenses(data.expenses)
       : useExpenseStore.getState().expenses;
 
     const clients = Array.isArray(data.clients)
-      ? (data.clients as Client[])
+      ? sanitizeClients(data.clients)
       : useClientStore.getState().clients;
 
     const vendors = Array.isArray(data.vendors)
-      ? (data.vendors as Vendor[])
+      ? sanitizeVendors(data.vendors)
       : useVendorStore.getState().vendors;
 
-    useInvoiceStore.getState().hydrate(invoices, invoices.length + 1);
-    useExpenseStore.getState().hydrate(expenses, expenses.length + 1);
-    useClientStore.getState().hydrate(clients, clients.length + 1);
-    useVendorStore.getState().hydrate(vendors, vendors.length + 1);
+    useInvoiceStore.getState().hydrate(invoices, safeNextId(invoices, data.nextInvId));
+    useExpenseStore.getState().hydrate(expenses, safeNextId(expenses, data.nextExpId));
+    useClientStore.getState().hydrate(clients, safeNextId(clients, data.nextClientId));
+    useVendorStore.getState().hydrate(vendors, safeNextId(vendors, data.nextVendorId));
 
-    if (data.profile && typeof data.profile === 'object') {
-      const profile = data.profile as Profile;
+    const profile = sanitizeProfile(data.profile);
+    if (profile) {
       storage.save('lx_profile', profile);
       useAppStore.getState().setProfile(profile);
     }

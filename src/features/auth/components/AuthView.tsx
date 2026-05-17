@@ -31,30 +31,25 @@ export default function AuthView() {
 
     setLoading(true);
     setError(null);
-    console.log('[LedgerX] AuthPage – handleSubmit, mode:', mode);
 
     try {
       if (mode === 'sign-in') {
         const result = await authService.signIn(email.trim(), password);
         if (result.success) {
-          console.log('[LedgerX] AuthPage – signIn success, uid:', result.user?.uid);
           closeAuthModal();
           toast.success('Welcome back!');
         } else {
           const msg = getAuthErrorMessage({ code: result.error });
-          console.warn('[LedgerX] AuthPage – signIn failed:', result.error);
           setError(msg);
           toast.error(msg);
         }
       } else {
         const result = await authService.signUp(email.trim(), password);
         if (result.success) {
-          console.log('[LedgerX] AuthPage – signUp success, uid:', result.user?.uid);
           closeAuthModal();
           toast.success('Account created! Welcome to LedgerX');
         } else {
           const msg = getAuthErrorMessage({ code: result.error });
-          console.warn('[LedgerX] AuthPage – signUp failed:', result.error);
           setError(msg);
           toast.error(msg);
         }

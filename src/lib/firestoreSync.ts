@@ -9,6 +9,14 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Invoice, Expense, Client, Vendor, Profile } from './types';
+import {
+  safeNextId,
+  sanitizeClients,
+  sanitizeExpenses,
+  sanitizeInvoices,
+  sanitizeProfile,
+  sanitizeVendors,
+} from './validation';
 
 // ── Ledger entries subcollection ─────────────────────────────────────────────
 
@@ -80,16 +88,20 @@ export async function fetchCloudData(uid: string): Promise<CloudData | null> {
     const snap = await getDoc(userDoc(uid));
     if (!snap.exists()) return null;
     const data = snap.data();
+    const invoices = sanitizeInvoices(data.invoices);
+    const expenses = sanitizeExpenses(data.expenses);
+    const clients = sanitizeClients(data.clients);
+    const vendors = sanitizeVendors(data.vendors);
     return {
-      invoices: data.invoices ?? [],
-      expenses: data.expenses ?? [],
-      clients: data.clients ?? [],
-      vendors: data.vendors ?? [],
-      profile: data.profile ?? null,
-      nextInvId: data.nextInvId ?? 1,
-      nextExpId: data.nextExpId ?? 1,
-      nextClientId: data.nextClientId ?? 1,
-      nextVendorId: data.nextVendorId ?? 1,
+      invoices,
+      expenses,
+      clients,
+      vendors,
+      profile: sanitizeProfile(data.profile),
+      nextInvId: safeNextId(invoices, data.nextInvId),
+      nextExpId: safeNextId(expenses, data.nextExpId),
+      nextClientId: safeNextId(clients, data.nextClientId),
+      nextVendorId: safeNextId(vendors, data.nextVendorId),
     };
   } catch (err) {
     console.error('[LedgerX] Failed to fetch cloud data:', err);

@@ -20,7 +20,7 @@ import {
   setPersistence,
   type User,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 
 export interface AuthResult {
@@ -42,6 +42,7 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/weak-password':           'Password is too weak. Please choose a stronger password.',
   'auth/invalid-api-key':         'Authentication configuration error. Please contact support.',
   'auth/app-not-authorized':      'This app is not authorized to use Firebase Authentication.',
+  'auth/missing-config':          'Cloud sign-in is not configured for this build.',
 };
 
 /** Maps a Firebase Auth error to a user-friendly message. */
@@ -65,35 +66,27 @@ export const authService = {
   },
 
   async signIn(email: string, password: string): Promise<AuthResult> {
-    console.log('[LedgerX] signIn – before Firebase call');
+    if (!isFirebaseConfigured) return { success: false, error: 'auth/missing-config' };
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      console.log('[LedgerX] signIn – Firebase response received, uid:', cred.user.uid);
-      console.log('[LedgerX] signIn – before setUser');
       useAuthStore.getState().setUser(cred.user);
       useAuthStore.getState().setLoading(false);
-      console.log('[LedgerX] signIn – after setUser');
       return { success: true, user: cred.user };
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? 'unknown';
-      console.error('[LedgerX] signIn – error', code, err);
       return { success: false, error: code };
     }
   },
 
   async signUp(email: string, password: string): Promise<AuthResult> {
-    console.log('[LedgerX] signUp – before Firebase call');
+    if (!isFirebaseConfigured) return { success: false, error: 'auth/missing-config' };
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('[LedgerX] signUp – Firebase response received, uid:', cred.user.uid);
-      console.log('[LedgerX] signUp – before setUser');
       useAuthStore.getState().setUser(cred.user);
       useAuthStore.getState().setLoading(false);
-      console.log('[LedgerX] signUp – after setUser');
       return { success: true, user: cred.user };
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? 'unknown';
-      console.error('[LedgerX] signUp – error', code, err);
       return { success: false, error: code };
     }
   },

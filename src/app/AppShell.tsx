@@ -53,6 +53,15 @@ const VIEWS: Record<ViewId, React.ComponentType> = {
   settings:  SettingsView,
 };
 
+function uniqueById<T extends { id: number }>(items: T[]): T[] {
+  const seen = new Set<number>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 function mergeLocalExpensesWithCloud(
   uid: string,
   cloudExpenses: Expense[],
@@ -65,7 +74,7 @@ function mergeLocalExpensesWithCloud(
     id: maxCloudId + index + 1,
     user_id: uid,
   }));
-  const mergedExpenses = [...migratedLocalExpenses, ...cloudExpenses];
+  const mergedExpenses = uniqueById([...migratedLocalExpenses, ...cloudExpenses]);
   const mergedNextExpId = Math.max(cloudNextExpId, maxCloudId + migratedLocalExpenses.length + 1);
 
   return {
