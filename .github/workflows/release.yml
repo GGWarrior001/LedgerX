@@ -9,101 +9,77 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  build-and-release:
+    name: Build & Release (${{ matrix.name }})
+    runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: "--bundles msi"
+            mobile: ""
+          - name: Linux
+            platform: ubuntu-latest
+            args: "--bundles deb,appimage"
+            mobile: ""
+          - name: Android
+            platform: ubuntu-latest
+            args: "--apk"
+            mobile: "android"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── Android / Linux only: Java + Android SDK ──────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || '' }}
+
+      - name: Install Linux desktop dependencies
+        if: matrix.platform == 'ubuntu-latest' && matrix.mobile != 'android'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
       - name: Setup Java 17
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.mobile == 'android'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Android SDK
+        if: matrix.mobile == 'android'
+        uses: android-actions/setup-android@v3
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
-      - name: Build Vite app
-        run: bun run build
+      - name: Initialize Android target
+        if: matrix.mobile == 'android'
+        run: npm run tauri android init
 
-      # ── Linux: Electron AppImage ──────────────────────────────────────────
-      - name: Build Electron (Linux AppImage)
-        if: matrix.os == 'ubuntu-22.04'
-        run: npx electron-builder --linux --publish never
+      - name: Build Android APK
+        if: matrix.mobile == 'android'
+        run: npm run tauri android build -- --apk
 
-      - name: Upload Linux AppImage
-        if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-dist
-          path: dist/*.AppImage
-
-      # ── Android: Capacitor APK ────────────────────────────────────────────
-      - name: Build Android APK (debug)
-        if: matrix.os == 'ubuntu-22.04'
-        env:
-          _JAVA_OPTIONS: -Xmx4g
-        run: |
-          rm -rf android
-          npx cap telemetry off
-          npx cap add android
-          printf 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g\nandroid.useAndroidX=true\nandroid.enableJetifier=true\n' > android/gradle.properties
-          npx cap sync android
-          sed -i "s/kotlin_version = ['\"][^'\"]*['\"]/kotlin_version = '1.9.10'/" android/build.gradle
-          sed -i "s|distributionUrl=.*|distributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.4-bin.zip|" android/gradle/wrapper/gradle-wrapper.properties
-          cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
-
-      - name: Upload Android APK
-        if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: android/app/build/outputs/apk/debug/*.apk
-
-      # ── Windows: Electron .exe installer ─────────────────────────────────
-      - name: Build Electron (Windows .exe)
-        if: matrix.os == 'windows-latest'
-        run: npx electron-builder --win --publish never
-
-      - name: Upload Windows installer
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-dist
-          path: dist/*.exe
-
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          allowUpdates: true
-          generate_release_notes: true
-          files: |
-            artifacts/linux-dist/*.AppImage
-            artifacts/windows-dist/*.exe
-            artifacts/android-apk/*.apk
+      - name: Build and upload release assets
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "LedgerX ${{ github.ref_name }}"
+          releaseBody: "Automated release for ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+          mobile: ${{ matrix.mobile }}
