@@ -2,7 +2,7 @@
 
 A modern, privacy-first finance management application built with React, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as a web app, a native desktop application (Electron), and a mobile app (Android via Capacitor).
 
-![Version](https://img.shields.io/badge/version-1.3.0-brightgreen) ![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF) ![Firebase](https://img.shields.io/badge/Firebase-12-FFCA28) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-1.3.0-brightgreen) ![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-6-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-8-119EFF) ![Firebase](https://img.shields.io/badge/Firebase-12-FFCA28) ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **Your financial data, your control.** LedgerX keeps your accounting private and secure, with all encryption happening on your device.
 
@@ -33,9 +33,9 @@ A modern, privacy-first finance management application built with React, featuri
 | Layer | Technology |
 |-------|-----------|
 | Framework | React 18 + TypeScript 5 |
-| Build Tool | Vite 5 |
+| Build Tool | Vite 6 |
 | Desktop | Electron 41 |
-| Mobile | Capacitor 6 (Android) |
+| Mobile | Capacitor 8 (Android) |
 | Styling | Tailwind CSS 3 + shadcn/ui |
 | Charts | Recharts |
 | Routing | React Router v6 |
@@ -92,8 +92,8 @@ A modern, privacy-first finance management application built with React, featuri
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **Bun** (recommended), **npm**, or **pnpm**
+- **Node.js** ≥ 22
+- **npm** (or Bun/pnpm if preferred)
 - **Git** (for cloning and version control)
 
 ### Installation
@@ -103,13 +103,11 @@ A modern, privacy-first finance management application built with React, featuri
 git clone https://github.com/GGWarrior001/LedgerX.git
 cd LedgerX
 
-# Install dependencies (Bun recommended)
-bun install
-# OR with npm
+# Install dependencies
 npm install
 
 # Start development server (runs on http://localhost:5173)
-bun run dev
+npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
@@ -136,30 +134,30 @@ cp .env.example .env
 
 ```bash
 # Build the production bundle
-bun run build
+npm run build
 
 # Preview the production build locally
-bun run preview
+npm run preview
 ```
 
 ### Desktop App (Electron)
 
 ```bash
 # 1. Build the web assets first
-bun run build
+npm run build
 
 # 2. Run the desktop app in development
-bun run electron
+npm run electron
 
 # 3. Package the desktop app as an AppImage (Linux) or NSIS installer (Windows)
-bun run electron:build
+npm run electron:build
 ```
 
 ### Mobile App (Android via Capacitor)
 
 ```bash
 # 1. Build the web assets
-bun run build
+npm run build
 
 # 2. Sync with the Android project
 npx cap sync android
@@ -173,7 +171,7 @@ npx cap open android
 LedgerX encrypts all financial data at rest using:
 
 1. **PBKDF2** key derivation (user passphrase → encryption key)
-2. **AES-256-CBC** symmetric encryption for all stored data
+2. **AES-256-GCM** authenticated symmetric encryption for all stored data
 3. **Auto-lock** after configurable inactivity timeout
 4. **Privacy mode** to mask sensitive values on screen
 
@@ -220,13 +218,13 @@ Contributions are welcome! Here's how you can help:
 
 ```bash
 # Run all tests
-bun run test
+npm run test
 
 # Watch mode
-bun run test:watch
+npm run test:watch
 
 # Lint code
-bun run lint
+npm run lint
 ```
 
 ## 🐛 Reporting Issues
@@ -273,7 +271,7 @@ Planned features and improvements:
 ### Architecture Guides
 
 - **State Management**: Zustand per-domain stores (useInvoiceStore, useClientStore, etc.) + TanStack Query for async data fetching
-- **Encryption Flow**: PBKDF2 → AES-256-CBC on client-side only
+- **Encryption Flow**: PBKDF2 → AES-256-GCM on client-side only
 - **Authentication**: Firebase Auth with optional Firestore sync
 - **Testing**: Vitest for units, Playwright for E2E
 
@@ -293,13 +291,13 @@ If you find a security vulnerability, please **do not open a public issue**. Con
 
 ```bash
 # Fast development with HMR (Hot Module Replacement)
-bun run dev
+npm run dev
 
 # Debug in browser DevTools
 # Open http://localhost:5173 and use F12
 
 # Build once and preview production bundle
-bun run build && bun run preview
+npm run build && npm run preview
 
 # Test with real Firebase (set .env variables)
 # or rely on offline-first mode for development
@@ -309,14 +307,14 @@ bun run build && bun run preview
 
 - Lazy-load pages with React Router
 - Use TanStack Query for smart caching
-- Monitor bundle size: `bun run build`
+- Monitor bundle size: `npm run build`
 - Leverage Vite's code splitting automatically
 
 ### Common Issues
 
 **Q: "Cannot find module" errors on startup**
-- Run `bun install` to ensure all dependencies are installed
-- Clear node_modules and reinstall if issues persist: `rm -rf node_modules && bun install`
+- Run `npm install` to ensure all dependencies are installed
+- Clear node_modules and reinstall if issues persist: `rm -rf node_modules package-lock.json && npm install`
 
 **Q: Firebase connection fails**
 - Verify `.env` file with correct Firebase credentials
@@ -324,12 +322,12 @@ bun run build && bun run preview
 - Confirm Email/Password auth is enabled in Firebase Console
 
 **Q: Electron app won't start**
-- Run `bun run build` first (required to generate dist/)
+- Run `npm run build` first (required to generate dist/)
 - Check if port 5173 is in use if running dev server
-- Inspect electron logs: `DEBUG=* bun run electron`
+- Inspect electron logs: `DEBUG=* npm run electron`
 
 **Q: Mobile app won't build**
-- Update Capacitor: `bun install`
+- Update Capacitor dependencies: `npm install`
 - Sync Android: `npx cap sync android`
 - Ensure Java 11+ and Android SDK 31+ are installed
 
