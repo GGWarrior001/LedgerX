@@ -1,17 +1,30 @@
 import { useState } from 'react';
 import { useAppStore } from '@/shared/stores/useAppStore';
+import { toast } from 'sonner';
 
 export default function AutoLock() {
   const unlock = useAppStore(s => s.unlock);
+  const unlocking = useAppStore(s => s.unlocking);
   const [passcode, setPasscode] = useState('');
-  const [error, setError]       = useState(false);
+  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleUnlock = () => {
-    if (unlock(passcode)) {
-      setError(false);
-    } else {
+  const handleUnlock = async () => {
+    if (!passcode) {
       setError(true);
+      setErrorMsg('Enter your passcode');
+      return;
+    }
+    setError(false);
+    setErrorMsg('');
+
+    try {
+      await unlock(passcode);
+    } catch (err) {
+      setError(true);
+      setErrorMsg('Incorrect passcode. Please try again.');
       setPasscode('');
+      console.error('[LedgerX]', err);
     }
   };
 
@@ -26,29 +39,34 @@ export default function AutoLock() {
         </div>
         <h2 className="text-lg font-bold mb-1">Session Locked</h2>
         <p className="text-sm text-muted-foreground mb-5">
-          Enter your passcode to unlock LedgerX
+          {unlocking ? 'Deriving encryption key... please wait' : 'Enter your passcode to unlock LedgerX'}
         </p>
         <input
           type="password"
           value={passcode}
           onChange={e => setPasscode(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleUnlock()}
+          onKeyDown={e => e.key === 'Enter' && !unlocking && handleUnlock()}
           placeholder="Enter passcode"
           autoFocus
-          className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-background outline-none focus:border-primary transition-colors mb-3 ${
+          disabled={unlocking}
+          className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-background outline-none focus:border-primary transition-colors mb-3 disabled:opacity-50 ${
             error ? 'border-destructive' : 'border-border'
           }`}
         />
         {error && (
           <p className="text-xs text-destructive mb-3">
-            Incorrect passcode. Please try again.
+            {errorMsg}
           </p>
         )}
         <button
           onClick={handleUnlock}
-          className="w-full py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity"
+          disabled={unlocking}
+          className="w-full py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Unlock
+          {unlocking && (
+            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+          )}
+          {unlocking ? 'Unlocking...' : 'Unlock'}
         </button>
       </div>
     </div>

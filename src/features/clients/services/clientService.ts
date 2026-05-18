@@ -10,14 +10,19 @@ import { pushCloudSnapshot } from '@/shared/services/cloudSnapshot';
 import type { Client } from '@/lib/types';
 
 export const clientService = {
-  addClient(
+  async addClient(
     cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>,
-  ): Client {
-    const newClient = useClientStore.getState().addClient(cli);
+  ): Promise<Client> {
+    try {
+      const newClient = await useClientStore.getState().addClient(cli);
 
-    const uid = useAuthStore.getState().user?.uid;
-    if (uid) pushCloudSnapshot(uid);
+      const uid = useAuthStore.getState().user?.uid;
+      if (uid) pushCloudSnapshot(uid);
 
-    return newClient;
+      return newClient;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add client:', err);
+      throw err;
+    }
   },
 };

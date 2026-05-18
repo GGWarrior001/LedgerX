@@ -60,24 +60,25 @@ interface AppStoreState {
   dark:          boolean;
   privacyMode:   boolean;
   locked:        boolean;
+  unlocking:     boolean;
   activeView:    ViewId;
   settings:      AppSettings;
   notifications: Notification[];
 
   // Actions
-  setProfile:           (profile: Profile) => void;
-  saveSettings:         (partial: Partial<Profile>) => void;
-  ensureProfile:        () => void;
+  setProfile:           (profile: Profile) => Promise<void>;
+  saveSettings:         (partial: Partial<Profile>) => Promise<void>;
+  ensureProfile:        () => Promise<void>;
   setActiveView:        (view: ViewId) => void;
   toggleTheme:          () => void;
   togglePrivacy:        () => void;
   lock:                 () => void;
-  unlock:               (passcode: string) => boolean;
-  setupEncryption:      (passcode: string) => void;
-  markNotifRead:        (id: number) => void;
-  markAllRead:          () => void;
-  setNotifications:     (notifs: Notification[]) => void;
-  rebuildNotifications: (invoices: Invoice[]) => void;
+  unlock:               (passcode: string) => Promise<void>;
+  setupEncryption:      (passcode: string) => Promise<void>;
+  markNotifRead:        (id: number) => Promise<void>;
+  markAllRead:          () => Promise<void>;
+  setNotifications:     (notifs: Notification[]) => Promise<void>;
+  rebuildNotifications: (invoices: Invoice[]) => Promise<void>;
 }
 
 const initialDark = localStorage.getItem('lx_dark') === '1';
@@ -101,32 +102,53 @@ export const useAppStore = create<AppStoreState>((set) => ({
   dark:          initialDark,
   privacyMode:   false,
   locked:        storage.isEncryptionSetup() && !storage.isUnlocked(),
+  unlocking:     false,
   activeView:    'dashboard',
   settings:      loadStored<AppSettings>('lx_settings', DEFAULT_SETTINGS),
   notifications: loadStored<Notification[] | null>('lx_notifs', null) ?? [],
 
-  setProfile: (profile) => {
-    if (!canPersistEncryptedData()) return;
-    storage.save('lx_profile', profile);
-    set({ profile });
+  setProfile: async (profile) => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      await storage.save('lx_profile', profile);
+      set({ profile });
+    } catch (err) {
+      console.error('[LedgerX] Failed to save profile:', err);
+      throw err;
+    }
   },
 
-  saveSettings: (partial) => {
-    if (!canPersistEncryptedData()) return;
-    set(s => {
-      const profile = { ...(s.profile ?? DEFAULT_PROFILE), ...partial };
-      storage.save('lx_profile', profile);
-      return { profile };
-    });
+  saveSettings: async (partial) => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      // Compute new profile state using current store state
+      const currentState = useAppStore.getState();
+      const profile = { ...(currentState.profile ?? DEFAULT_PROFILE), ...partial };
+      
+      // Persist to storage before updating state
+      await storage.save('lx_profile', profile);
+      
+      // Only update state after persistence succeeds
+      set({ profile });
+    } catch (err) {
+      console.error('[LedgerX] Failed to save settings:', err);
+      throw err;
+    }
   },
 
-  ensureProfile: () => {
-    if (!canPersistEncryptedData()) return;
-    set(s => {
-      if (s.profile) return s;
-      storage.save('lx_profile', DEFAULT_PROFILE);
-      return { profile: DEFAULT_PROFILE };
-    });
+  ensureProfile: async () => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      const currentState = useAppStore.getState();
+      if (currentState.profile) return Promise.resolve();
+      
+      // Profile missing; create and persist default
+      await storage.save('lx_profile', DEFAULT_PROFILE);
+      set({ profile: DEFAULT_PROFILE });
+    } catch (err) {
+      console.error('[LedgerX] Failed to ensure profile:', err);
+      throw err;
+    }
   },
 
   setActiveView: (activeView) => set({ activeView }),
@@ -144,49 +166,94 @@ export const useAppStore = create<AppStoreState>((set) => ({
 
   lock: () => { storage.clearEncryptionKey(); set({ locked: true }); },
 
-  unlock: (passcode) => {
-    const ok = storage.unlock(passcode);
-    if (ok) set({ locked: false });
-    return ok;
+  unlock: async (passcode) => {
+    const get = useAppStore.getState;
+    if (get().unlocking) {
+      console.warn('[LedgerX] Unlock already in progress, ignoring duplicate attempt');
+      return Promise.resolve();
+    }
+
+    set({ unlocking: true });
+    try {
+      const ok = await storage.unlock(passcode);
+      if (ok) {
+        set({ locked: false, unlocking: false });
+      } else {
+        set({ unlocking: false });
+        throw new Error('Incorrect passcode');
+      }
+    } catch (err) {
+      set({ unlocking: false });
+      console.error('[LedgerX] Unlock failed:', err);
+      throw err;
+    }
   },
 
-  setupEncryption: (passcode) => {
-    storage.setupEncryption(passcode);
-    set(s => {
-      const settings = { ...s.settings, encryptionEnabled: true };
-      storage.save('lx_settings', settings);
-      return { settings };
-    });
+  setupEncryption: async (passcode) => {
+    set({ unlocking: true });
+    try {
+      await storage.setupEncryption(passcode);
+      const settings = { ...useAppStore.getState().settings, encryptionEnabled: true };
+      await storage.save('lx_settings', settings);
+      set({ settings, unlocking: false });
+    } catch (err) {
+      set({ unlocking: false });
+      console.error('[LedgerX] Encryption setup failed:', err);
+      throw err;
+    }
   },
 
-  markNotifRead: (id) => {
-    if (!canPersistEncryptedData()) return;
-    set(s => {
-      const notifications = s.notifications.map(n => n.id === id ? { ...n, read: true } : n);
-      storage.save('lx_notifs', notifications);
-      return { notifications };
-    });
+  markNotifRead: async (id) => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      const currentState = useAppStore.getState();
+      const notifications = currentState.notifications.map(n =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      
+      await storage.save('lx_notifs', notifications);
+      set({ notifications });
+    } catch (err) {
+      console.error('[LedgerX] Failed to mark notification read:', err);
+      throw err;
+    }
   },
 
-  markAllRead: () => {
-    if (!canPersistEncryptedData()) return;
-    set(s => {
-      const notifications = s.notifications.map(n => ({ ...n, read: true }));
-      storage.save('lx_notifs', notifications);
-      return { notifications };
-    });
+  markAllRead: async () => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      const currentState = useAppStore.getState();
+      const notifications = currentState.notifications.map(n => ({ ...n, read: true }));
+      
+      await storage.save('lx_notifs', notifications);
+      set({ notifications });
+    } catch (err) {
+      console.error('[LedgerX] Failed to mark all notifications read:', err);
+      throw err;
+    }
   },
 
-  setNotifications: (notifications) => {
-    if (!canPersistEncryptedData()) return;
-    storage.save('lx_notifs', notifications);
-    set({ notifications });
+  setNotifications: async (notifications) => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      await storage.save('lx_notifs', notifications);
+      set({ notifications });
+    } catch (err) {
+      console.error('[LedgerX] Failed to save notifications:', err);
+      throw err;
+    }
   },
 
-  rebuildNotifications: (invoices) => {
-    if (!canPersistEncryptedData()) return;
-    const notifications = buildNotifications(invoices);
-    storage.save('lx_notifs', notifications);
-    set({ notifications });
+  rebuildNotifications: async (invoices) => {
+    if (!canPersistEncryptedData()) return Promise.resolve();
+    try {
+      const notifications = buildNotifications(invoices);
+      
+      await storage.save('lx_notifs', notifications);
+      set({ notifications });
+    } catch (err) {
+      console.error('[LedgerX] Failed to rebuild notifications:', err);
+      throw err;
+    }
   },
 }));

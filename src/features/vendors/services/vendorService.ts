@@ -7,14 +7,19 @@ import { pushCloudSnapshot } from '@/shared/services/cloudSnapshot';
 import type { Vendor } from '@/lib/types';
 
 export const vendorService = {
-  addVendor(
+  async addVendor(
     ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>,
-  ): Vendor {
-    const newVendor = useVendorStore.getState().addVendor(ven);
+  ): Promise<Vendor> {
+    try {
+      const newVendor = await useVendorStore.getState().addVendor(ven);
 
-    const uid = useAuthStore.getState().user?.uid;
-    if (uid) pushCloudSnapshot(uid);
+      const uid = useAuthStore.getState().user?.uid;
+      if (uid) pushCloudSnapshot(uid);
 
-    return newVendor;
+      return newVendor;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add vendor:', err);
+      throw err;
+    }
   },
 };

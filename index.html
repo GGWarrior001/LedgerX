@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Phase 3: Content Security Policy — restricts script/style/connect origins -->
+    <!-- Security: Content Security Policy — restricts script/style/connect origins -->
     <meta http-equiv="Content-Security-Policy"
       content="default-src 'self';
                script-src 'self';
@@ -13,7 +13,24 @@
                connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com;
                img-src 'self' data: blob:;" />
 
-    <!-- Phase 5: App identity — replace Lovable placeholders -->
+    <!-- Security: Prevent MIME type sniffing -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- Security: Prevent clickjacking -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- Security: Enable XSS protection in older browsers -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+
+    <!-- Security: Referrer policy for privacy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Security: Permissions policy for browser features -->
+    <meta http-equiv="Permissions-Policy"
+      content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=() " />
+
+    <!-- App identity -->
     <title>LedgerX — Personal Finance &amp; Accounting</title>
     <meta name="description" content="LedgerX — A modern, privacy-first accounting app with AES-256 encryption, invoicing, expense tracking, and optional cloud sync." />
     <meta name="author" content="LedgerX" />

@@ -9,45 +9,62 @@ interface ExpenseStoreState {
   expenses:  Expense[];
   nextExpId: number;
 
-  addExpense: (exp: Omit<Expense, 'id'>) => Expense;
-  hydrate:    (expenses: Expense[], nextId: number) => void;
-  reset:      () => void;
+  addExpense: (exp: Omit<Expense, 'id'>) => Promise<Expense>;
+  hydrate:    (expenses: Expense[], nextId: number) => Promise<void>;
+  reset:      () => Promise<void>;
 }
 
-function loadStored<T>(key: string, defaultValue: T): T {
-  try {
-    return storage.load<T>(key, defaultValue);
-  } catch (err) {
-    if (err instanceof StorageLockedError) return defaultValue;
-    throw err;
-  }
+function canPersistEncryptedData(): boolean {
+  return !storage.isEncryptionSetup() || storage.isUnlocked();
 }
 
 export const useExpenseStore = create<ExpenseStoreState>((set, get) => ({
-  expenses:  loadStored<Expense[]>('lx_expenses', []),
-  nextExpId: loadStored<number>('lx_exp_id', 1),
+  expenses:  [],
+  nextExpId: 1,
 
-  addExpense: (exp) => {
-    const { nextExpId, expenses } = get();
-    const id     = nextExpId;
-    const newExp = { ...exp, id };
-    const newExpenses = [newExp, ...expenses];
-    const newId = id + 1;
-    set({ expenses: newExpenses, nextExpId: newId });
-    storage.save('lx_expenses', newExpenses);
-    storage.save('lx_exp_id', newId);
-    return newExp;
+  addExpense: async (exp) => {
+    if (!canPersistEncryptedData()) return { ...exp, id: 0 } as Expense;
+    
+    try {
+      const freshState = get();
+      const { nextExpId, expenses } = freshState;
+      const id     = nextExpId;
+      const newExp = { ...exp, id };
+      const newExpenses = [newExp, ...expenses];
+      const newId = id + 1;
+      
+      // Atomically save both keys before updating state
+      await storage.save('lx_expenses', newExpenses);
+      await storage.save('lx_exp_id', newId);
+      
+      // Only update state after persistence succeeds
+      set({ expenses: newExpenses, nextExpId: newId });
+      return newExp;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add expense:', err);
+      throw err;
+    }
   },
 
-  hydrate: (expenses, nextId) => {
-    set({ expenses, nextExpId: nextId });
-    storage.save('lx_expenses', expenses);
-    storage.save('lx_exp_id', nextId);
+  hydrate: async (expenses, nextId) => {
+    try {
+      await storage.save('lx_expenses', expenses);
+      await storage.save('lx_exp_id', nextId);
+      set({ expenses, nextExpId: nextId });
+    } catch (err) {
+      console.error('[LedgerX] Failed to hydrate expenses:', err);
+      throw err;
+    }
   },
 
-  reset: () => {
-    set({ expenses: [], nextExpId: 1 });
-    storage.save('lx_expenses', []);
-    storage.save('lx_exp_id', 1);
+  reset: async () => {
+    try {
+      await storage.save('lx_expenses', []);
+      await storage.save('lx_exp_id', 1);
+      set({ expenses: [], nextExpId: 1 });
+    } catch (err) {
+      console.error('[LedgerX] Failed to reset expenses:', err);
+      throw err;
+    }
   },
 }));

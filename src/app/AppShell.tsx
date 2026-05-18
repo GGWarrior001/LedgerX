@@ -87,32 +87,43 @@ function mergeLocalExpensesWithCloud(
 
 function AppContent() {
   const { activeView, locked, settings, lock } = useAppStore();
+  const { user } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const wasLocked = useRef(locked);
 
   // Auto-lock on inactivity
   const lastActivity = useRef(Date.now());
   useEffect(() => {
-    if (!storage.isEncryptionSetup() || locked) return;
+    if (locked) return;
 
-    const timeout  = settings.sessionTimeout * 60 * 1000;
-    const onAction = () => { lastActivity.current = Date.now(); };
-    const events   = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
+    // Security: Guest sessions timeout after 1 hour (3600 seconds)
+    // Authenticated sessions use configurable timeout (default 10 minutes)
+    const isGuest = !user;
+    const timeoutSeconds = isGuest ? 3600 : settings.sessionTimeout * 60;
+    const timeoutMs = timeoutSeconds * 1000;
 
-    events.forEach(e => window.addEventListener(e, onAction));
-    const interval = setInterval(() => {
-      if (Date.now() - lastActivity.current > timeout) lock();
-    }, 30_000);
+    // Only enforce auto-lock if encryption is setup OR user is not authenticated
+    if (storage.isEncryptionSetup() || isGuest) {
+      const onAction = () => { lastActivity.current = Date.now(); };
+      const events   = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
 
-    return () => {
-      events.forEach(e => window.removeEventListener(e, onAction));
-      clearInterval(interval);
-    };
-  }, [locked, settings.sessionTimeout, lock]);
+      events.forEach(e => window.addEventListener(e, onAction));
+      const interval = setInterval(() => {
+        if (Date.now() - lastActivity.current > timeoutMs) lock();
+      }, 30_000);
+
+      return () => {
+        events.forEach(e => window.removeEventListener(e, onAction));
+        clearInterval(interval);
+      };
+    }
+  }, [locked, settings.sessionTimeout, user, lock]);
 
   useEffect(() => {
     if (wasLocked.current && !locked && storage.isEncryptionSetup()) {
-      dataService.loadFromStorage();
+      dataService.loadFromStorage().catch(err => {
+        console.error('[LedgerX] Failed to load from storage on unlock:', err);
+      });
     }
     wasLocked.current = locked;
   }, [locked]);
@@ -181,7 +192,7 @@ export default function AppShell() {
     Promise.all([
       fetchCloudData(user.uid),
       fetchLedgerEntries(user.uid),
-    ]).then(([cloud, ledger]) => {
+    ]).then(async ([cloud, ledger]) => {
       // Prefer ledger entries (append-only) over snapshot when available
       const hasLedger   = ledger.invoices.length > 0 || ledger.expenses.length > 0;
       const cloudInvoices = hasLedger ? ledger.invoices : (cloud?.invoices ?? []);
@@ -194,7 +205,7 @@ export default function AppShell() {
       if (cloud) {
         hydrateClients(cloud.clients, cloud.nextClientId);
         hydrateVendors(cloud.vendors, cloud.nextVendorId);
-        if (cloud.profile) setProfile(cloud.profile);
+        if (cloud.profile) await setProfile(cloud.profile);
       }
 
       if (localGuestExpenses.length > 0) {
@@ -218,7 +229,7 @@ export default function AppShell() {
       }
 
       if (cloud || hasLedger) {
-        rebuildNotifications(cloudInvoices);
+        await rebuildNotifications(cloudInvoices);
       }
     }).catch(err => {
       console.error('[LedgerX] Cloud sync error:', err);

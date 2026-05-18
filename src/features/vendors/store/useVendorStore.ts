@@ -17,64 +17,89 @@ interface VendorStoreState {
 
   addVendor: (
     ven: Omit<Vendor, 'id' | 'initials' | 'color' | 'totalSpent'>
-  ) => Vendor;
+  ) => Promise<Vendor>;
 
-  updateVendorSpending: (vendorName: string, amount: number) => void;
-  hydrate: (vendors: Vendor[], nextId: number) => void;
-  reset:   () => void;
+  updateVendorSpending: (vendorName: string, amount: number) => Promise<void>;
+  hydrate: (vendors: Vendor[], nextId: number) => Promise<void>;
+  reset:   () => Promise<void>;
 }
 
-function loadStored<T>(key: string, defaultValue: T): T {
-  try {
-    return storage.load<T>(key, defaultValue);
-  } catch (err) {
-    if (err instanceof StorageLockedError) return defaultValue;
-    throw err;
-  }
+function canPersistEncryptedData(): boolean {
+  return !storage.isEncryptionSetup() || storage.isUnlocked();
 }
 
 export const useVendorStore = create<VendorStoreState>((set, get) => ({
-  vendors:      loadStored<Vendor[]>('lx_vendors', []),
-  nextVendorId: loadStored<number>('lx_ven_id', 1),
+  vendors:      [],
+  nextVendorId: 1,
 
-  addVendor: (ven) => {
-    const { nextVendorId, vendors } = get();
-    const id = nextVendorId;
-    const newVendor: Vendor = {
-      ...ven,
-      id,
-      initials:   getInitials(ven.name),
-      color:      COLORS[id % COLORS.length],
-      totalSpent: 0,
-    };
-    const newVendors = [...vendors, newVendor];
-    const newId = id + 1;
-    set({ vendors: newVendors, nextVendorId: newId });
-    storage.save('lx_vendors', newVendors);
-    storage.save('lx_ven_id', newId);
-    return newVendor;
+  addVendor: async (ven) => {
+    if (!canPersistEncryptedData()) return { ...ven, id: 0, initials: '', color: '', totalSpent: 0 } as Vendor;
+    
+    try {
+      const freshState = get();
+      const { nextVendorId, vendors } = freshState;
+      const id = nextVendorId;
+      const newVendor: Vendor = {
+        ...ven,
+        id,
+        initials:   getInitials(ven.name),
+        color:      COLORS[id % COLORS.length],
+        totalSpent: 0,
+      };
+      const newVendors = [...vendors, newVendor];
+      const newId = id + 1;
+      
+      // Atomically save both keys before updating state
+      await storage.save('lx_vendors', newVendors);
+      await storage.save('lx_ven_id', newId);
+      
+      // Only update state after persistence succeeds
+      set({ vendors: newVendors, nextVendorId: newId });
+      return newVendor;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add vendor:', err);
+      throw err;
+    }
   },
 
-  updateVendorSpending: (vendorName, amount) => {
+  updateVendorSpending: async (vendorName, amount) => {
     if (!vendorName.trim()) return;
-    set(s => {
-      const vendors = s.vendors.map(v => (
+    if (!canPersistEncryptedData()) return;
+    
+    try {
+      const freshState = get();
+      const vendors = freshState.vendors.map(v => (
         v.name === vendorName ? { ...v, totalSpent: v.totalSpent + amount } : v
       ));
-      storage.save('lx_vendors', vendors);
-      return { vendors };
-    });
+      
+      // Await persistence before state update
+      await storage.save('lx_vendors', vendors);
+      set({ vendors });
+    } catch (err) {
+      console.error('[LedgerX] Failed to update vendor spending:', err);
+      throw err;
+    }
   },
 
-  hydrate: (vendors, nextId) => {
-    set({ vendors, nextVendorId: nextId });
-    storage.save('lx_vendors', vendors);
-    storage.save('lx_ven_id', nextId);
+  hydrate: async (vendors, nextId) => {
+    try {
+      await storage.save('lx_vendors', vendors);
+      await storage.save('lx_ven_id', nextId);
+      set({ vendors, nextVendorId: nextId });
+    } catch (err) {
+      console.error('[LedgerX] Failed to hydrate vendors:', err);
+      throw err;
+    }
   },
 
-  reset: () => {
-    set({ vendors: [], nextVendorId: 1 });
-    storage.save('lx_vendors', []);
-    storage.save('lx_ven_id', 1);
+  reset: async () => {
+    try {
+      await storage.save('lx_vendors', []);
+      await storage.save('lx_ven_id', 1);
+      set({ vendors: [], nextVendorId: 1 });
+    } catch (err) {
+      console.error('[LedgerX] Failed to reset vendors:', err);
+      throw err;
+    }
   },
 }));

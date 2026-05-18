@@ -10,7 +10,7 @@ export default function InvoiceModal({ onClose }: Props) {
   const today = new Date().toISOString().split('T')[0];
   const due = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const clientName = fd.get('clientName') as string;
@@ -19,15 +19,21 @@ export default function InvoiceModal({ onClose }: Props) {
     if (!clientName) errs.clientName = 'Please select a client.';
     if (!amount || amount <= 0) errs.amount = 'Amount must be greater than zero.';
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    addInvoice({
-      clientName,
-      description: fd.get('description') as string,
-      issueDate: fd.get('issueDate') as string,
-      dueDate: fd.get('dueDate') as string,
-      status: fd.get('status') as 'draft' | 'sent',
-      amount: Math.round(amount),
-    });
-    onClose();
+    
+    try {
+      await addInvoice({
+        clientName,
+        description: fd.get('description') as string,
+        issueDate: fd.get('issueDate') as string,
+        dueDate: fd.get('dueDate') as string,
+        status: fd.get('status') as 'draft' | 'sent',
+        amount: Math.round(amount),
+      });
+      onClose();
+    } catch (err) {
+      console.error('[LedgerX] Failed to create invoice:', err);
+      setErrors({ submit: 'Failed to create invoice. Please try again.' });
+    }
   };
 
   return (

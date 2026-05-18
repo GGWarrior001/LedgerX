@@ -17,30 +17,34 @@ import { pushCloudSnapshot } from '@/shared/services/cloudSnapshot';
 import type { Invoice } from '@/lib/types';
 
 export const invoiceService = {
-  addInvoice(
+  async addInvoice(
     inv: Omit<Invoice, 'id' | 'number' | 'clientInitials' | 'clientColor'>,
-  ): Invoice {
-    // 1. Create invoice in store
-    const clients = useClientStore.getState().clients;
-    const newInv  = useInvoiceStore.getState().addInvoice(inv, clients);
+  ): Promise<Invoice> {
+    try {
+      // 1. Create invoice in store (awaits persistence)
+      const newInv = await useInvoiceStore.getState().addInvoice(inv);
 
-    // 2. Update client stats
-    useClientStore.getState().updateClientBilling(
-      inv.clientName,
-      inv.amount,
-      inv.status,
-    );
+      // 2. Update client stats (awaits persistence)
+      await useClientStore.getState().updateClientBilling(
+        inv.clientName,
+        inv.amount,
+        inv.status,
+      );
 
-    // 3. Rebuild notifications
-    useAppStore.getState().rebuildNotifications(useInvoiceStore.getState().invoices);
+      // 3. Rebuild notifications (awaits persistence)
+      await useAppStore.getState().rebuildNotifications(useInvoiceStore.getState().invoices);
 
-    // 4. Cloud sync (fire-and-forget)
-    const uid = useAuthStore.getState().user?.uid;
-    if (uid) {
-      addLedgerEntry(uid, 'invoice', newInv).catch(() => {});
-      pushCloudSnapshot(uid);
+      // 4. Cloud sync (fire-and-forget)
+      const uid = useAuthStore.getState().user?.uid;
+      if (uid) {
+        addLedgerEntry(uid, 'invoice', newInv).catch(() => {});
+        pushCloudSnapshot(uid);
+      }
+
+      return newInv;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add invoice:', err);
+      throw err;
     }
-
-    return newInv;
   },
 };

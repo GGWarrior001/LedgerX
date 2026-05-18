@@ -23,63 +23,73 @@ interface ClientStoreState {
 
   addClient: (
     cli: Omit<Client, 'id' | 'initials' | 'color' | 'billed' | 'outstanding' | 'invoices'>
-  ) => Client;
+  ) => Promise<Client>;
 
   updateClientStats: (
     clientName:    string,
     amount:        number,
     isOutstanding: boolean,
-  ) => void;
+  ) => Promise<void>;
 
   /** Alias for updateClientStats — treats 'sent' and 'overdue' as outstanding. */
   updateClientBilling: (
     clientName: string,
     amount:     number,
     status:     string,
-  ) => void;
+  ) => Promise<void>;
 
-  hydrate:    (clients: Client[], nextId: number) => void;
+  hydrate:    (clients: Client[], nextId: number) => Promise<void>;
   /** Alias for hydrate. */
-  setClients: (clients: Client[], nextId: number) => void;
-  reset:      () => void;
+  setClients: (clients: Client[], nextId: number) => Promise<void>;
+  reset:      () => Promise<void>;
 }
 
-function loadStored<T>(key: string, defaultValue: T): T {
-  try {
-    return storage.load<T>(key, defaultValue);
-  } catch (err) {
-    if (err instanceof StorageLockedError) return defaultValue;
-    throw err;
-  }
+function canPersistEncryptedData(): boolean {
+  return !storage.isEncryptionSetup() || storage.isUnlocked();
 }
 
 export const useClientStore = create<ClientStoreState>((set, get) => ({
-  clients:      loadStored<Client[]>('lx_clients', []),
-  nextClientId: loadStored<number>('lx_cli_id', 1),
+  clients:      [],
+  nextClientId: 1,
 
-  addClient: (cli) => {
-    const { nextClientId, clients } = get();
-    const id = nextClientId;
-    const newClient: Client = {
-      ...cli,
-      id,
-      initials:    getInitials(cli.name),
-      color:       COLORS[id % COLORS.length],
-      billed:      0,
-      outstanding: 0,
-      invoices:    0,
-    };
-    const newClients = [...clients, newClient];
-    const newId = id + 1;
-    set({ clients: newClients, nextClientId: newId });
-    storage.save('lx_clients', newClients);
-    storage.save('lx_cli_id', newId);
-    return newClient;
+  addClient: async (cli) => {
+    if (!canPersistEncryptedData()) return { ...cli, id: 0, initials: '', color: '', billed: 0, outstanding: 0, invoices: 0 } as Client;
+    
+    try {
+      const freshState = get();
+      const { nextClientId, clients } = freshState;
+      const id = nextClientId;
+      const newClient: Client = {
+        ...cli,
+        id,
+        initials:    getInitials(cli.name),
+        color:       COLORS[id % COLORS.length],
+        billed:      0,
+        outstanding: 0,
+        invoices:    0,
+      };
+      const newClients = [...clients, newClient];
+      const newId = id + 1;
+      
+      // Atomically save both keys before updating state
+      await storage.save('lx_clients', newClients);
+      await storage.save('lx_cli_id', newId);
+      
+      // Only update state after persistence succeeds
+      set({ clients: newClients, nextClientId: newId });
+      return newClient;
+    } catch (err) {
+      console.error('[LedgerX] Failed to add client:', err);
+      throw err;
+    }
   },
 
-  updateClientStats: (clientName, amount, isOutstanding) => {
-    set(s => {
-      const clients = s.clients.map(c => {
+  updateClientStats: async (clientName, amount, isOutstanding) => {
+    if (!canPersistEncryptedData()) return;
+    
+    try {
+      const freshState = get();
+      const clients = freshState.clients.map(c => {
         if (c.name !== clientName) return c;
         return {
           ...c,
@@ -88,31 +98,51 @@ export const useClientStore = create<ClientStoreState>((set, get) => ({
           invoices:    c.invoices + 1,
         };
       });
-      storage.save('lx_clients', clients);
-      return { clients };
-    });
+      
+      // Await persistence before state update
+      await storage.save('lx_clients', clients);
+      set({ clients });
+    } catch (err) {
+      console.error('[LedgerX] Failed to update client stats:', err);
+      throw err;
+    }
   },
 
-  updateClientBilling: (clientName, amount, status) => {
+  updateClientBilling: async (clientName, amount, status) => {
     const isOutstanding = status === 'sent' || status === 'overdue';
-    get().updateClientStats(clientName, amount, isOutstanding);
+    await get().updateClientStats(clientName, amount, isOutstanding);
   },
 
-  hydrate: (clients, nextId) => {
-    set({ clients, nextClientId: nextId });
-    storage.save('lx_clients', clients);
-    storage.save('lx_cli_id', nextId);
+  hydrate: async (clients, nextId) => {
+    try {
+      await storage.save('lx_clients', clients);
+      await storage.save('lx_cli_id', nextId);
+      set({ clients, nextClientId: nextId });
+    } catch (err) {
+      console.error('[LedgerX] Failed to hydrate clients:', err);
+      throw err;
+    }
   },
 
-  setClients: (clients, nextId) => {
-    set({ clients, nextClientId: nextId });
-    storage.save('lx_clients', clients);
-    storage.save('lx_cli_id', nextId);
+  setClients: async (clients, nextId) => {
+    try {
+      await storage.save('lx_clients', clients);
+      await storage.save('lx_cli_id', nextId);
+      set({ clients, nextClientId: nextId });
+    } catch (err) {
+      console.error('[LedgerX] Failed to set clients:', err);
+      throw err;
+    }
   },
 
-  reset: () => {
-    set({ clients: [], nextClientId: 1 });
-    storage.save('lx_clients', []);
-    storage.save('lx_cli_id', 1);
+  reset: async () => {
+    try {
+      await storage.save('lx_clients', []);
+      await storage.save('lx_cli_id', 1);
+      set({ clients: [], nextClientId: 1 });
+    } catch (err) {
+      console.error('[LedgerX] Failed to reset clients:', err);
+      throw err;
+    }
   },
 }));

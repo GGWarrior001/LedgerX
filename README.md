@@ -19,7 +19,7 @@ A modern, privacy-first finance management application built with React, featuri
 - **General Ledger** — Complete transaction history
 - **Auto-Lock** — Session timeout with configurable duration
 - **Privacy Mode** — Hide sensitive financial data on screen
-- **AES-256 Encryption** — All stored data encrypted with PBKDF2-derived keys via crypto-js
+- **AES-GCM Encryption** — All stored data encrypted with PBKDF2+SHA-256 derived keys via WebCrypto API
 - **Data Export** — Back up all data as a JSON file from Settings
 - **Onboarding Flow** — Guided first-time setup wizard
 - **Multi-Currency Support** — Configurable currency symbol per business
@@ -41,7 +41,7 @@ A modern, privacy-first finance management application built with React, featuri
 | Routing | React Router v6 |
 | State | Zustand + TanStack Query |
 | Forms | React Hook Form + Zod |
-| Encryption | crypto-js (AES-256-CBC, PBKDF2) |
+| Encryption | WebCrypto API (AES-GCM, PBKDF2-SHA256) |
 | Auth / Sync | Firebase Auth + Firestore |
 | Testing | Vitest + Playwright |
 

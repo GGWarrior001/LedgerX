@@ -9,6 +9,7 @@ import { downloadBlob } from '@/shared/utils/csv';
 
 export default function SettingsView() {
   const profile         = useAppStore(s => s.profile);
+  const unlocking       = useAppStore(s => s.unlocking);
   const saveSettings    = useAppStore(s => s.saveSettings);
   const setupEncryption = useAppStore(s => s.setupEncryption);
   const user            = useAuthStore(s => s.user);
@@ -28,26 +29,39 @@ export default function SettingsView() {
   const [currency, setCurrency] = useState(p.currency);
   const [passcode, setPasscode] = useState('');
 
-  const handleSave = () => {
-    saveSettings({ name, role, city, businessName: biz, fiscalYear: fy, currency });
+  const handleSave = async () => {
+    await saveSettings({ name, role, city, businessName: biz, fiscalYear: fy, currency });
     toast.success('Settings saved successfully');
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!confirm(
       'Are you sure you want to reset ALL application data? ' +
       'This will delete all invoices, expenses, clients, vendors, and notifications. ' +
       'Your profile settings will be preserved. This action cannot be undone.'
     )) return;
-    dataService.resetData();
-    toast.success('Application data has been reset');
+    try {
+      await dataService.resetData();
+      toast.success('Application data has been reset');
+    } catch (err) {
+      console.error('[LedgerX] Failed to reset data:', err);
+      toast.error('Failed to reset data. Please try again.');
+    }
   };
 
-  const handleSetupEncryption = () => {
-    if (passcode.length < 6) { toast.error('Passcode must be at least 6 characters'); return; }
-    setupEncryption(passcode);
-    setPasscode('');
-    toast.success('Encryption enabled. Your data is now secured.');
+  const handleSetupEncryption = async () => {
+    if (passcode.length < 6) {
+      toast.error('Passcode must be at least 6 characters');
+      return;
+    }
+    try {
+      await setupEncryption(passcode);
+      setPasscode('');
+      toast.success('Encryption enabled. Your data is now secured.');
+    } catch (err) {
+      console.error('[LedgerX] Encryption setup failed:', err);
+      toast.error('Failed to set up encryption. Please try again.');
+    }
   };
 
   const handleLogout = async () => {
@@ -60,9 +74,9 @@ export default function SettingsView() {
     }
   };
 
-  const exportData = () => {
+  const exportData = async () => {
     try {
-      const data = dataService.exportData();
+      const data = await dataService.exportData();
       downloadBlob(
         'ledgerx-backup.json',
         new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
@@ -169,13 +183,18 @@ export default function SettingsView() {
               value={passcode}
               onChange={e => setPasscode(e.target.value)}
               placeholder="Set a passcode (min 6 chars)"
-              className="border border-border rounded-lg px-3 py-[7px] text-[13px] bg-background outline-none focus:border-primary transition-colors flex-1"
+              disabled={unlocking}
+              className="border border-border rounded-lg px-3 py-[7px] text-[13px] bg-background outline-none focus:border-primary transition-colors flex-1 disabled:opacity-50"
             />
             <button
               onClick={handleSetupEncryption}
-              className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity whitespace-nowrap"
+              disabled={unlocking}
+              className="px-3 py-[7px] rounded-lg text-[12.5px] font-medium bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-2"
             >
-              Enable Encryption
+              {unlocking && (
+                <div className="w-3 h-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+              )}
+              {unlocking ? 'Setting up...' : 'Enable Encryption'}
             </button>
           </div>
         </div>

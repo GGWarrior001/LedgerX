@@ -5,16 +5,20 @@ interface Props { onClose: () => void; }
 export default function VendorModal({ onClose }: Props) {
   const { addVendor } = useApp();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    addVendor({
-      name: fd.get('name') as string,
-      city: fd.get('city') as string,
-      email: fd.get('email') as string,
-      phone: fd.get('phone') as string,
-    });
-    onClose();
+    try {
+      await addVendor({
+        name: fd.get('name') as string,
+        city: fd.get('city') as string,
+        email: fd.get('email') as string,
+        phone: fd.get('phone') as string,
+      });
+      onClose();
+    } catch (err) {
+      console.error('[LedgerX] Failed to add vendor:', err);
+    }
   };
 
   return (

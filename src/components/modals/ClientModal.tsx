@@ -5,16 +5,20 @@ interface Props { onClose: () => void; }
 export default function ClientModal({ onClose }: Props) {
   const { addClient } = useApp();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    addClient({
-      name: fd.get('name') as string,
-      city: fd.get('city') as string,
-      email: fd.get('email') as string,
-      phone: fd.get('phone') as string,
-    });
-    onClose();
+    try {
+      await addClient({
+        name: fd.get('name') as string,
+        city: fd.get('city') as string,
+        email: fd.get('email') as string,
+        phone: fd.get('phone') as string,
+      });
+      onClose();
+    } catch (err) {
+      console.error('[LedgerX] Failed to add client:', err);
+    }
   };
 
   return (

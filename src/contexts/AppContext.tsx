@@ -35,18 +35,18 @@ export interface AppContextType {
   setActiveView:    (v: ViewId)              => void;
   toggleTheme:      ()                        => void;
   togglePrivacy:    ()                        => void;
-  setProfile:       (p: Profile)             => void;
-  saveSettings:     (p: Partial<Profile>)    => void;
-  addInvoice:       (inv: Omit<Invoice,  'id'|'number'|'clientInitials'|'clientColor'>) => void;
-  addExpense:       (exp: Omit<Expense,  'id'>)                                         => void;
-  addClient:        (cli: Omit<Client,   'id'|'initials'|'color'|'billed'|'outstanding'|'invoices'>) => void;
-  addVendor:        (ven: Omit<Vendor,   'id'|'initials'|'color'|'totalSpent'>)         => void;
-  resetData:        ()                        => void;
-  loadDemoData:     ()                        => void;
-  loadFreshData:    ()                        => void;
-  importData:       (data: Record<string, unknown>) => void;
-  markNotifRead:    (id: number)             => void;
-  markAllRead:      ()                        => void;
+  setProfile:       (p: Profile)             => Promise<void>;
+  saveSettings:     (p: Partial<Profile>)    => Promise<void>;
+  addInvoice:       (inv: Omit<Invoice,  'id'|'number'|'clientInitials'|'clientColor'>) => Promise<Invoice>;
+  addExpense:       (exp: Omit<Expense,  'id'>)                                         => Promise<Expense>;
+  addClient:        (cli: Omit<Client,   'id'|'initials'|'color'|'billed'|'outstanding'|'invoices'>) => Promise<Client>;
+  addVendor:        (ven: Omit<Vendor,   'id'|'initials'|'color'|'totalSpent'>)         => Promise<Vendor>;
+  resetData:        ()                        => Promise<void>;
+  loadDemoData:     ()                        => Promise<void>;
+  loadFreshData:    ()                        => Promise<void>;
+  importData:       (data: Record<string, unknown>) => Promise<void>;
+  markNotifRead:    (id: number)             => Promise<void>;
+  markAllRead:      ()                        => Promise<void>;
   unlock:           (passcode: string)       => boolean;
   setupEncryption:  (passcode: string)       => void;
 }
@@ -94,15 +94,15 @@ export function useApp(): AppContextType {
     markAllRead:     app.markAllRead,
 
     // Domain mutations (via domain services)
-    addInvoice:  (inv) => { invoiceService.addInvoice(inv); },
-    addExpense:  (exp) => { expenseService.addExpense(exp); },
-    addClient:   (cli) => { clientService.addClient(cli); },
-    addVendor:   (ven) => { vendorService.addVendor(ven); },
+    addInvoice:  (inv) => invoiceService.addInvoice(inv),
+    addExpense:  (exp) => expenseService.addExpense(exp),
+    addClient:   (cli) => clientService.addClient(cli),
+    addVendor:   (ven) => vendorService.addVendor(ven),
 
     // Multi-store orchestration (via dataService)
-    resetData:    dataService.resetData.bind(dataService),
-    loadDemoData: dataService.loadDemoData.bind(dataService),
-    loadFreshData:dataService.loadFreshData.bind(dataService),
-    importData:   dataService.importData.bind(dataService),
+    resetData:    () => dataService.resetData(),
+    loadDemoData: () => dataService.loadDemoData(),
+    loadFreshData: () => dataService.loadFreshData(),
+    importData:   (data) => dataService.importData(data),
   };
 }
