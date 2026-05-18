@@ -53,7 +53,7 @@ LedgerX helps individuals, freelancers, and small teams manage invoices, expense
 
 - **WebCrypto API** for modern browser-native cryptography
 - **AES-256-GCM authenticated encryption** with per-record random IVs
-- **PBKDF2-SHA256 key derivation** (`src/lib/storage.ts`: 120k iterations in normal runtime; reduced in test mode)
+- **PBKDF2-SHA256 key derivation** with runtime-configured iteration policy
 - **Corruption/tamper detection** via GCM authentication tag verification
 - **Async-safe persistence model** to avoid blocking and reduce unsafe write timing
 - **Race-condition hardening** in critical flows (e.g., duplicate unlock prevention, persist-then-commit store updates)
