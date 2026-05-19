@@ -300,11 +300,16 @@ export async function decryptAES_GCM(
   if (!tag || tag.length !== TAG_SIZE_BITS / 8) {
     throw new Error(`Authentication tag must be exactly ${TAG_SIZE_BITS / 8} bytes`);
   }
+  if (!ciphertext || ciphertext.length === 0) {
+    throw new Error('Ciphertext cannot be empty');
+  }
 
   // Reconstruct the full encrypted buffer (ciphertext + tag)
-  const encryptedBuffer = new Uint8Array(ciphertext.length + tag.length);
-  encryptedBuffer.set(ciphertext, 0);
-  encryptedBuffer.set(tag, ciphertext.length);
+  // We use a fresh buffer and explicit copy to handle subarray offsets safely
+  const combinedLength = ciphertext.length + tag.length;
+  const encryptedBuffer = new Uint8Array(combinedLength);
+  encryptedBuffer.set(new Uint8Array(ciphertext.buffer, ciphertext.byteOffset, ciphertext.byteLength), 0);
+  encryptedBuffer.set(new Uint8Array(tag.buffer, tag.byteOffset, tag.byteLength), ciphertext.byteLength);
 
   try {
     const decrypted = await crypto.subtle.decrypt(
@@ -315,8 +320,8 @@ export async function decryptAES_GCM(
     return new TextDecoder().decode(decrypted);
   } catch (err) {
     // WebCrypto throws OperationError for tag verification failure
-    if (err instanceof Error && err.message.includes('verification')) {
-      throw new Error('Authentication tag verification failed (data may be tampered)');
+    if (err instanceof Error && (err.message.includes('verification') || err.name === 'OperationError')) {
+      throw new Error('Authentication tag verification failed (data may be tampered or wrong key)');
     }
     throw err;
   }

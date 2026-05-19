@@ -42,6 +42,34 @@ const NUMBER_REGEX = /[0-9]/;
 const SYMBOL_REGEX = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/;
 
 /**
+ * Internal helper to evaluate password rules without side effects or circular calls.
+ */
+function evaluateRules(password: string): { errors: string[]; isValid: boolean } {
+  const errors: string[] = [];
+
+  if (password.length < MIN_LENGTH) {
+    errors.push(`Password must be at least ${MIN_LENGTH} characters (currently ${password.length})`);
+  }
+  if (!UPPERCASE_REGEX.test(password)) {
+    errors.push('Password must contain at least one uppercase letter (A-Z)');
+  }
+  if (!LOWERCASE_REGEX.test(password)) {
+    errors.push('Password must contain at least one lowercase letter (a-z)');
+  }
+  if (!NUMBER_REGEX.test(password)) {
+    errors.push('Password must contain at least one digit (0-9)');
+  }
+  if (!SYMBOL_REGEX.test(password)) {
+    errors.push('Password must contain at least one symbol (!@#$%^&*)');
+  }
+
+  return {
+    errors,
+    isValid: errors.length === 0,
+  };
+}
+
+/**
  * Validates a password against OWASP requirements.
  * Returns validation result with specific error messages for each failed requirement.
  *
@@ -49,37 +77,10 @@ const SYMBOL_REGEX = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/;
  * @returns ValidationResult with valid flag, errors array, and strength level
  */
 export function validatePassword(password: string): ValidationResult {
-  const errors: string[] = [];
-
-  // Check length
-  if (password.length < MIN_LENGTH) {
-    errors.push(`Password must be at least ${MIN_LENGTH} characters (currently ${password.length})`);
-  }
-
-  // Check uppercase
-  if (!UPPERCASE_REGEX.test(password)) {
-    errors.push('Password must contain at least one uppercase letter (A-Z)');
-  }
-
-  // Check lowercase
-  if (!LOWERCASE_REGEX.test(password)) {
-    errors.push('Password must contain at least one lowercase letter (a-z)');
-  }
-
-  // Check number
-  if (!NUMBER_REGEX.test(password)) {
-    errors.push('Password must contain at least one digit (0-9)');
-  }
-
-  // Check symbol
-  if (!SYMBOL_REGEX.test(password)) {
-    errors.push('Password must contain at least one symbol (!@#$%^&*)');
-  }
-
-  const valid = errors.length === 0;
+  const { errors, isValid } = evaluateRules(password);
   const strength = calculateStrength(password);
 
-  return { valid, errors, strength };
+  return { valid: isValid, errors, strength };
 }
 
 /**
@@ -133,10 +134,10 @@ export function checkRequirements(password: string): RequirementCheck[] {
  * @returns PasswordStrength level
  */
 export function calculateStrength(password: string): PasswordStrength {
-  const result = validatePassword(password);
+  const { isValid } = evaluateRules(password);
 
   // Weak: fails any requirement
-  if (!result.valid) {
+  if (!isValid) {
     return 'weak';
   }
 
@@ -226,5 +227,5 @@ function hasComplexitySignals(password: string): boolean {
  * @returns True if password passes OWASP requirements
  */
 export function isStrongPassword(password: string): boolean {
-  return validatePassword(password).valid;
+  return evaluateRules(password).isValid;
 }
