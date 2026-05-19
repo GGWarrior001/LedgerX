@@ -1,383 +1,196 @@
-# LedgerX — Personal Finance & Accounting App
+# LedgerX
 
-A modern, privacy-first finance management application built with React, featuring AES-256 encryption, invoicing, expense tracking, client/vendor management, and financial reporting. Runs as a web app, a native desktop application (Electron), and a mobile app (Android via Capacitor).
+Modern, privacy-first personal finance and accounting software with encrypted local storage, optional cloud sync, and offline-first workflows.
 
-![Version](https://img.shields.io/badge/version-1.3.0-brightgreen) ![Built with React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![Electron](https://img.shields.io/badge/Electron-41-47848F) ![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF) ![Firebase](https://img.shields.io/badge/Firebase-12-FFCA28) ![License](https://img.shields.io/badge/license-MIT-green)
-
-> **Your financial data, your control.** LedgerX keeps your accounting private and secure, with all encryption happening on your device.
+![Version](https://img.shields.io/badge/version-1.3.0-brightgreen)
+![React](https://img.shields.io/badge/React-18-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF)
+![Firebase](https://img.shields.io/badge/Firebase-12-FFCA28)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## ✨ Features
+## 1) Project Overview
 
-- **Dashboard** — At-a-glance financial overview with charts, key metrics, and recent transactions
-- **Invoices** — Create, track, and manage invoices (draft → sent → paid → overdue)
-- **Expenses** — Log and categorize business expenses with receipt tracking
-- **Clients** — Manage client profiles, billing history, and outstanding balances
-- **Vendors** — Track vendor relationships and spending
-- **Reports** — Visual financial reports powered by Recharts
-- **General Ledger** — Complete transaction history
-- **Auto-Lock** — Session timeout with configurable duration
-- **Privacy Mode** — Hide sensitive financial data on screen
-- **AES-GCM Encryption** — All stored data encrypted with PBKDF2+SHA-256 derived keys via WebCrypto API
-- **Data Export** — Back up all data as a JSON file from Settings
-- **Onboarding Flow** — Guided first-time setup wizard
-- **Multi-Currency Support** — Configurable currency symbol per business
-- **Fiscal Year Settings** — Flexible fiscal year configuration
-- **Notifications** — In-app notification panel
-- **Cloud Sync** — Optional Firebase authentication (email/password) with Firestore-backed cloud sync so your data is available across devices
-- **Offline-First** — App works fully without a Firebase account; cloud sync activates automatically once signed in
+LedgerX helps individuals, freelancers, and small teams manage invoices, expenses, clients, vendors, and reporting from a single interface.
 
-## 🛠 Tech Stack
+### What LedgerX does
+- Tracks invoicing and payment status
+- Organizes expenses and vendor/client records
+- Produces dashboard and report views for business health
+- Stores data locally by default, with optional Firebase sync
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + TypeScript 5 |
-| Build Tool | Vite 5 |
-| Desktop | Electron 41 |
-| Mobile | Capacitor 6 (Android) |
-| Styling | Tailwind CSS 3 + shadcn/ui |
-| Charts | Recharts |
-| Routing | React Router v6 |
-| State | Zustand + TanStack Query |
-| Forms | React Hook Form + Zod |
-| Encryption | WebCrypto API (AES-GCM, PBKDF2-SHA256) |
-| Auth / Sync | Firebase Auth + Firestore |
-| Testing | Vitest + Playwright |
+### Core features
+- Encrypted local data storage
+- Offline-first usage
+- Optional cloud sync (Firebase Auth + Firestore)
+- JSON backup/export workflow
+- Responsive web UI plus desktop (Electron) and Android (Capacitor)
 
-## 📁 Project Structure
+### Target users
+- Privacy-conscious individuals
+- Freelancers and independent consultants
+- Small businesses that need lightweight accounting without sacrificing data control
 
-```
-├── android/             # Capacitor Android project
-├── electron/
-│   ├── main.js          # Electron main process
-│   └── preload.js       # Context bridge / preload script
-└── src/
-    ├── app/
-    │   └── AppShell.tsx     # Root shell: auth listener, cloud sync, layout
-    ├── components/
-    │   ├── layout/          # Sidebar, Topbar
-    │   ├── modals/          # Client, Expense, Invoice, Vendor modals
-    │   ├── ui/              # shadcn/ui components
-    │   ├── NavLink.tsx      # Navigation component
-    │   └── NotificationPanel.tsx
-    ├── features/            # Domain feature modules
-    │   ├── auth/            # Sign-in / sign-up, AutoLock, Onboarding
-    │   ├── clients/
-    │   ├── dashboard/
-    │   ├── expenses/
-    │   ├── invoices/
-    │   ├── ledger/
-    │   ├── reports/
-    │   ├── settings/
-    │   └── vendors/
-    │       └── (each feature has components/, store/, services/)
-    ├── shared/
-    │   ├── components/      # ErrorBoundary and other cross-cutting UI
-    │   ├── hooks/           # Shared React hooks
-    │   ├── services/        # Firestore, storage, sync services
-    │   └── stores/          # useAppStore (shared UI state)
-    ├── lib/
-    │   ├── constants.ts     # App constants (currencies, fiscal years, categories)
-    │   ├── firebase.ts      # Firebase app / auth / Firestore initialisation
-    │   ├── firestoreSync.ts # Cloud data read/write helpers
-    │   ├── storage.ts       # Encrypted localStorage wrapper
-    │   ├── types.ts         # TypeScript interfaces
-    │   └── utils.ts         # Utility functions
-    ├── test/                # Unit test setup and examples
-    └── main.tsx
-```
+---
 
-## 🚀 Getting Started
+## 2) Key Features
+
+- **Local-first encrypted storage** for core financial records
+- **WebCrypto AES-GCM encryption** for authenticated local data protection
+- **Async persistence architecture** with awaited writes and persistence-before-state updates
+- **Cloud sync** via Firebase Authentication and Firestore
+- **Import/export capabilities** (JSON export in app; import support in data service)
+- **Offline support** with local storage as default source of truth
+- **Autosave behavior** through immediate persistence on state-changing actions
+- **Secure authentication** (Firebase email/password + local passcode lock)
+- **Responsive UI** optimized for desktop and mobile layouts
+
+---
+
+## 3) Security Highlights
+
+- **WebCrypto API** for modern browser-native cryptography
+- **AES-256-GCM authenticated encryption** with per-record random IVs
+- **PBKDF2-SHA256 key derivation** with runtime-configured iteration policy
+- **Corruption/tamper detection** via GCM authentication tag verification
+- **Async-safe persistence model** to avoid blocking and reduce unsafe write timing
+- **Race-condition hardening** in critical flows (e.g., duplicate unlock prevention, persist-then-commit store updates)
+- **Secure error handling patterns** with typed app errors and centralized handling utilities
+- **Password/passcode validation** with strong-rule validation logic for auth flows
+- **Security headers/policies** in `index.html` (CSP, referrer policy, permissions policy, anti-frame/mime-sniffing headers)
+
+---
+
+## 4) Architecture
+
+LedgerX is a React + TypeScript SPA built on modular feature domains with Zustand state management.
+
+- **React + TypeScript**: component-driven UI and strict typing
+- **Zustand stores**: domain stores (`invoices`, `expenses`, `clients`, `vendors`, `app`, `auth`) for predictable state updates
+- **Async storage layer**: encrypted `storage` service with async WebCrypto operations and envelope-based persistence
+- **Firebase integration**: optional auth and Firestore sync with local-first fallback
+- **Encryption flow**:
+  1. User passcode → PBKDF2-SHA256 key derivation
+  2. Data encrypted with AES-GCM (ciphertext + auth tag)
+  3. Encrypted envelope stored in local storage
+  4. Unlock requires verifier decryption with derived key
+
+---
+
+## 5) Tech Stack
+
+- **React 18**
+- **TypeScript 5**
+- **Vite 6**
+- **Firebase (Auth + Firestore)**
+- **Zustand**
+- **Tailwind CSS**
+- **Electron** (desktop runtime)
+- **Capacitor** (Android runtime)
+
+---
+
+## 6) Recent Major Improvements
+
+- Migrated core encryption from **crypto-js** legacy paths to **WebCrypto** AES-GCM primitives
+- Refactored storage and service paths to **async-first persistence**
+- Hardened state updates with **persist-before-commit** patterns in domain stores
+- Added safeguards around critical flows to reduce **race-condition risk**
+- Improved encryption UX with clearer lock/unlock behavior and passcode-driven setup
+
+---
+
+## 7) Getting Started
 
 ### Prerequisites
+- Node.js **22+** (recommended by dependency engines)
+- npm
 
-- **Node.js** ≥ 18
-- **Bun** (recommended), **npm**, or **pnpm**
-- **Git** (for cloning and version control)
-
-### Installation
-
+### Install
 ```bash
-# Clone the repository
-git clone https://github.com/GGWarrior001/LedgerX.git
-cd LedgerX
-
-# Install dependencies (Bun recommended)
-bun install
-# OR with npm
 npm install
-
-# Start development server (runs on http://localhost:5173)
-bun run dev
 ```
 
-The app will be available at `http://localhost:5173`.
-
-### Firebase Setup (Optional — for Cloud Sync)
-
-Cloud sync is opt-in. The app runs fully offline without a Firebase project.
-
-To enable authentication and Firestore sync:
-
-1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
-2. Enable **Email/Password** authentication under *Authentication → Sign-in method*.
-3. Enable **Firestore Database** (start in production or test mode).
-4. Copy `.env.example` to `.env` and fill in your project credentials:
-
+### Development server
 ```bash
-cp .env.example .env
-# Then edit .env with your VITE_FIREBASE_* values
+npm run dev
 ```
 
-**Note**: Never commit `.env` to source control. It's already in `.gitignore`.
-
-### Build for Production
-
+### Build
 ```bash
-# Build the production bundle
-bun run build
-
-# Preview the production build locally
-bun run preview
+npm run build
 ```
 
-### Desktop App (Electron)
-
+### Test
 ```bash
-# 1. Build the web assets first
-bun run build
-
-# 2. Run the desktop app in development
-bun run electron
-
-# 3. Package the desktop app as an AppImage (Linux) or NSIS installer (Windows)
-bun run electron:build
+npm run test
 ```
 
-### Mobile App (Android via Capacitor)
-
+### Lint
 ```bash
-# 1. Build the web assets
-bun run build
-
-# 2. Sync with the Android project
-npx cap sync android
-
-# 3. Open in Android Studio to run or build the APK
-npx cap open android
+npm run lint
 ```
 
-## 🔐 Security Architecture
-
-LedgerX encrypts all financial data at rest using:
-
-1. **PBKDF2** key derivation (user passphrase → encryption key)
-2. **AES-256-CBC** symmetric encryption for all stored data
-3. **Auto-lock** after configurable inactivity timeout
-4. **Privacy mode** to mask sensitive values on screen
-
-> All encryption runs client-side. No data leaves the device unless you opt in to cloud sync.
-
-When cloud sync is enabled, data is stored in **Firestore** under your authenticated Firebase user account. Sign-in/sign-up is handled via **Firebase Authentication** (email/password).
-
-## 🧪 Testing
-
+### Typecheck
 ```bash
-# Unit tests
-npx vitest run
-
-# E2E tests
-npx playwright test
+npm run typecheck
 ```
 
-## 📄 License
+### Optional: Firebase setup (cloud sync)
+1. Create a Firebase project.
+2. Enable Email/Password auth.
+3. Enable Firestore.
+4. Copy `.env.example` to `.env` and fill `VITE_FIREBASE_*` values.
+
+---
+
+## 8) Security Notice
+
+- All LedgerX encryption is performed **client-side**.
+- Use a **strong passcode/password** and avoid reusing credentials.
+- Plain financial data should not leave the device unencrypted; cloud sync is optional and user-controlled.
+
+---
+
+## 9) Project Structure
+
+```text
+LedgerX/
+├── src/
+│   ├── app/                  # App shell and main orchestration
+│   ├── features/             # Domain modules (auth, invoices, expenses, etc.)
+│   ├── shared/               # Shared services, stores, hooks, components
+│   ├── lib/                  # Core libs (storage, webCrypto, firebase, validation, types)
+│   ├── components/           # Global UI/layout components
+│   └── test/                 # Unit test setup and test suites
+├── electron/                 # Desktop entrypoint and preload
+├── android/                  # Capacitor Android project
+├── tests/e2e/                # Playwright end-to-end tests
+├── index.html                # App entry + security meta headers
+└── package.json              # Scripts and dependencies
+```
+
+---
+
+## 10) Roadmap / Future Improvements
+
+- Move expensive PBKDF2 work to **Web Workers** for smoother unlock UX
+- Add **IndexedDB** backend option for larger local datasets
+- Expand **E2E coverage** for encryption, sync, and onboarding flows
+- Improve **sync conflict resolution** for multi-device updates
+
+---
+
+## License
 
 MIT
 
----
+## Contributing
 
-## 🤝 Contributing
+Contributions are welcome. Please open issues or pull requests with clear reproduction steps and scope.
 
-Contributions are welcome! Here's how you can help:
+## Security Reporting
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Make** your changes
-4. **Commit** with a descriptive message (`git commit -m 'Add amazing feature'`)
-5. **Push** to your branch (`git push origin feature/amazing-feature`)
-6. **Open** a pull request
-
-### Code Standards
-
-- Use **TypeScript** for all new code
-- Follow **ESLint** configuration (run `npm run lint`)
-- Write **unit tests** for logic (Vitest)
-- Add **E2E tests** for user flows (Playwright)
-- Keep components **small and focused**
-
-### Running Tests
-
-```bash
-# Run all tests
-bun run test
-
-# Watch mode
-bun run test:watch
-
-# Lint code
-bun run lint
-```
-
-## 🐛 Reporting Issues
-
-Found a bug or want to suggest a feature? Please [open an issue](https://github.com/GGWarrior001/LedgerX/issues) with:
-
-- **Clear description** of the problem
-- **Steps to reproduce** (if applicable)
-- **Expected vs actual** behavior
-- **Screenshots** (for UI bugs)
-- **Environment** details (OS, browser, Node version)
-
-## 📞 Support
-
-- **Documentation**: See sections above for setup, architecture, and API details
-- **Issues**: Check [existing issues](https://github.com/GGWarrior001/LedgerX/issues)
-- **Discussions**: Share ideas and ask questions in [discussions](https://github.com/GGWarrior001/LedgerX/discussions)
-
-## 🗺️ Roadmap
-
-Planned features and improvements:
-
-- [ ] Budget forecasting and alerts
-- [ ] Tax report generation
-- [ ] Multi-user support with role-based access
-- [ ] Advanced financial analytics
-- [ ] PDF invoice/receipt generation
-- [ ] Bank account integration (read-only sync)
-- [ ] iOS support via Capacitor
-- [ ] Dark mode improvements
-- [ ] Performance optimizations
-
-## 🎓 Learning Resources
-
-### For Developers
-
-- [Vite Documentation](https://vitejs.dev/)
-- [React 18 Guide](https://react.dev/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [Firebase Documentation](https://firebase.google.com/docs)
-- [Electron Documentation](https://www.electronjs.org/docs)
-- [Capacitor Documentation](https://capacitorjs.com/docs)
-
-### Architecture Guides
-
-- **State Management**: Zustand per-domain stores (useInvoiceStore, useClientStore, etc.) + TanStack Query for async data fetching
-- **Encryption Flow**: PBKDF2 → AES-256-CBC on client-side only
-- **Authentication**: Firebase Auth with optional Firestore sync
-- **Testing**: Vitest for units, Playwright for E2E
-
-## 🚨 Security Notes
-
-- **All encryption is client-side**: No plain data sent to servers
-- **Optional cloud sync**: Firebase sync requires explicit user authentication
-- **Auto-lock feature**: Prevents unauthorized access during inactivity
-- **Privacy mode**: Masks financial data on screen to prevent shoulder surfing
-- **Source-available**: Code is open for security audits
-
-If you find a security vulnerability, please **do not open a public issue**. Contact the maintainers directly.
-
-## 💡 Tips & Tricks
-
-### Development Workflow
-
-```bash
-# Fast development with HMR (Hot Module Replacement)
-bun run dev
-
-# Debug in browser DevTools
-# Open http://localhost:5173 and use F12
-
-# Build once and preview production bundle
-bun run build && bun run preview
-
-# Test with real Firebase (set .env variables)
-# or rely on offline-first mode for development
-```
-
-### Performance Optimization
-
-- Lazy-load pages with React Router
-- Use TanStack Query for smart caching
-- Monitor bundle size: `bun run build`
-- Leverage Vite's code splitting automatically
-
-### Common Issues
-
-**Q: "Cannot find module" errors on startup**
-- Run `bun install` to ensure all dependencies are installed
-- Clear node_modules and reinstall if issues persist: `rm -rf node_modules && bun install`
-
-**Q: Firebase connection fails**
-- Verify `.env` file with correct Firebase credentials
-- Check Firebase project permissions for Firestore Database
-- Confirm Email/Password auth is enabled in Firebase Console
-
-**Q: Electron app won't start**
-- Run `bun run build` first (required to generate dist/)
-- Check if port 5173 is in use if running dev server
-- Inspect electron logs: `DEBUG=* bun run electron`
-
-**Q: Mobile app won't build**
-- Update Capacitor: `bun install`
-- Sync Android: `npx cap sync android`
-- Ensure Java 11+ and Android SDK 31+ are installed
-
-## 📊 Project Stats
-
-- **Lines of Code**: ~5,000+
-- **Components**: 50+
-- **Test Coverage**: Vitest + Playwright tests included
-- **Dependencies**: 30+ core, 20+ dev
-- **Bundle Size**: ~500KB gzipped (optimized)
-
-## 🌍 Internationalization (i18n)
-
-Currently, LedgerX supports English with multi-currency display. Future versions will include:
-
-- UI translation support
-- Locale-specific date/number formatting
-- RTL language support
-
----
-
-## 📝 Changelog
-
-### v1.3.0
-- Electron desktop app support
-- Capacitor Android mobile app integration
-- Enhanced Firebase cloud sync
-- Auto-lock session timeout
-- Privacy mode for sensitive data
-- Multi-currency support
-- Improved financial reports
-
-### v1.2.0
-- General Ledger view
-- Advanced expense categorization
-- Report generation
-
-### v1.1.0
-- Client and vendor management
-- Invoice workflow (draft → paid)
-- Firestore cloud sync
-
-### v1.0.0
-- Initial release
-- Core dashboard and transactions
-- AES-256 encryption
-- Offline-first architecture
-
----
-
-**Made with ❤️ by the LedgerX Team**
+If you identify a security issue, please avoid posting exploit details publicly and contact maintainers responsibly.
