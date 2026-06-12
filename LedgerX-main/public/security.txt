@@ -1,0 +1,6 @@
+Contact: security@ledgerx.dev
+Expires: 2027-05-18T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://ledgerx.dev/.well-known/security.txt
+Policy: https://ledgerx.dev/SECURITY.md
+Acknowledgments: https://ledgerx.dev/SECURITY.md#credits

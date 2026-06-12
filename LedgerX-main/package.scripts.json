@@ -1,0 +1,35 @@
+{
+  "name": "ledgerx",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "scripts": {
+    "dev":              "vite",
+    "build":            "vite build",
+    "build:dev":        "vite build --mode development",
+    "preview":          "vite preview",
+
+    "lint":             "eslint . --max-warnings=0",
+    "typecheck":        "tsc --noEmit",
+
+    "test":             "vitest run",
+    "test:watch":       "vitest",
+    "test:coverage":    "vitest run --coverage",
+    "test:ui":          "vitest --ui",
+
+    "android:release":  "./scripts/build-android-release.sh",
+
+    "electron":         "electron .",
+    "electron:build":   "vite build && electron-builder",
+    "electron:build:mac": "vite build && electron-builder --mac",
+
+    "verify":           "npm run lint && npm run typecheck && npm run test:coverage && npm audit --audit-level=moderate && npm run build",
+    "security:audit":   "npm audit --audit-level=moderate",
+    "security:check":   "npm run lint && npm run typecheck && npm run security:audit"
+  },
+  "_comments": {
+    "verify":           "Full CI/CD gate: lint → typecheck → test with coverage thresholds → audit → build",
+    "security:audit":   "Run standalone to check for known CVEs in dependencies",
+    "test:coverage":    "Fails if coverage drops below thresholds set in vite.config.ts"
+  }
+}

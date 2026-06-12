@@ -1,0 +1,193 @@
+rules_version = '2';
+// firestore.rules – LedgerX Firestore Security Rules (HARDENED v4)
+//
+// Changes from v3:
+//   - Array size caps added: invoices ≤ 10,000, expenses ≤ 10,000,
+//     clients ≤ 10,000, vendors ≤ 10,000 (prevents DoS via giant writes)
+//   - `validLedgerEntry` now enforces entryType strict match before data check
+//   - `isDateString` tightened: minimum 8 chars (rejects empty strings)
+//   - `validProfile` rejects null values in required string fields
+//   - Comments added explaining each rule's security rationale
+//
+// All rules follow deny-by-default. Anything not explicitly allowed is denied.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Auth helper ────────────────────────────────────────────────────────────
+
+    /** Only the authenticated user matching userId can read/write their data. */
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Primitive validators ───────────────────────────────────────────────────
+
+    /**
+     * Validates a string field with a maximum length.
+     * Rejects null, non-strings, and over-length values.
+     */
+    function isString(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    /** Optional string — allows empty string but not null or non-string. */
+    function isOptionalString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    /**
+     * Validates a non-negative monetary amount.
+     * Cap: 1,000,000,000 (one billion) — prevents overflow attacks.
+     */
+    function isNonNegativeNumber(value) {
+      return value is number && value >= 0 && value <= 1000000000;
+    }
+
+    /**
+     * Validates a date string (ISO 8601).
+     * Minimum 8 chars rejects empty strings like '' or '0'.
+     */
+    function isDateString(value) {
+      return value is string && value.size() >= 8 && value.size() <= 32;
+    }
+
+    /**
+     * Validates a positive integer ID.
+     * int type check + range guard prevents float IDs and overflow.
+     */
+    function isPositiveInt(value) {
+      return value is int && value >= 1 && value <= 1000000000;
+    }
+
+    // ── Domain validators ──────────────────────────────────────────────────────
+
+    function validProfile(profile) {
+      return profile == null || (
+        profile is map &&
+        profile.keys().hasOnly([
+          'name', 'role', 'city', 'businessName',
+          'fiscalYear', 'currency', 'dataChoice'
+        ]) &&
+        isOptionalString(profile.name, 120) &&
+        isOptionalString(profile.role, 80) &&
+        isOptionalString(profile.city, 120) &&
+        isString(profile.businessName, 160) &&
+        isOptionalString(profile.fiscalYear, 20) &&
+        isString(profile.currency, 8) &&
+        isOptionalString(profile.dataChoice, 40)
+      );
+    }
+
+    function validInvoice(data) {
+      return data is map &&
+        data.keys().hasOnly([
+          'id', 'number', 'clientName', 'clientInitials', 'clientColor',
+          'description', 'issueDate', 'dueDate', 'status', 'amount'
+        ]) &&
+        isPositiveInt(data.id) &&
+        isOptionalString(data.number, 40) &&
+        isString(data.clientName, 160) &&
+        isOptionalString(data.clientInitials, 12) &&
+        isOptionalString(data.clientColor, 24) &&
+        isOptionalString(data.description, 500) &&
+        isDateString(data.issueDate) &&
+        isDateString(data.dueDate) &&
+        data.status in ['draft', 'sent', 'paid', 'overdue'] &&
+        isNonNegativeNumber(data.amount);
+    }
+
+    function validExpense(data, userId) {
+      return data is map &&
+        data.keys().hasOnly([
+          'id', 'description', 'category', 'vendor',
+          'date', 'receipt', 'amount', 'user_id'
+        ]) &&
+        isPositiveInt(data.id) &&
+        isString(data.description, 500) &&
+        isString(data.category, 120) &&
+        isString(data.vendor, 160) &&
+        isDateString(data.date) &&
+        data.receipt in ['attached', 'pending'] &&
+        isNonNegativeNumber(data.amount) &&
+        (!('user_id' in data) || data.user_id == userId || data.user_id == 'local');
+    }
+
+    /**
+     * Top-level snapshot validation.
+     *
+     * Array size caps prevent a malicious write from storing millions of
+     * records in a single Firestore document, which could cause:
+     *   - Extremely slow client reads (DoS on the user's own session)
+     *   - High Firestore read costs
+     *   - Memory exhaustion on mobile clients
+     */
+    function validSnapshot() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'invoices', 'expenses', 'clients', 'vendors',
+          'profile', 'nextInvId', 'nextExpId',
+          'nextClientId', 'nextVendorId', 'updatedAt'
+        ]) &&
+        d.invoices is list &&
+        d.expenses is list &&
+        d.clients  is list &&
+        d.vendors  is list &&
+        // Array size caps (anti-DoS)
+        d.invoices.size()  <= 10000 &&
+        d.expenses.size()  <= 10000 &&
+        d.clients.size()   <= 10000 &&
+        d.vendors.size()   <= 10000 &&
+        validProfile(d.profile) &&
+        d.nextInvId    is int && d.nextInvId    >= 1 &&
+        d.nextExpId    is int && d.nextExpId    >= 1 &&
+        d.nextClientId is int && d.nextClientId >= 1 &&
+        d.nextVendorId is int && d.nextVendorId >= 1;
+    }
+
+    /**
+     * Ledger entry validation.
+     *
+     * entryType checked first (short-circuit) before the expensive
+     * data map validation — reduces Rules evaluation cost.
+     */
+    function validLedgerEntry(userId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['entryType', 'data', 'createdAt']) &&
+        d.entryType in ['invoice', 'expense'] &&
+        (
+          d.entryType == 'invoice'
+            ? validInvoice(d.data)
+            : validExpense(d.data, userId)
+        );
+    }
+
+    // ── Collection rules ───────────────────────────────────────────────────────
+
+    /**
+     * User cloud data snapshot — one document per authenticated user.
+     *
+     * delete: if false — deletion is intentionally blocked.
+     * If a user wants to delete their account, they should use the
+     * "Reset Data" function in Settings, which wipes the document fields.
+     */
+    match /users/{userId} {
+      allow read:          if signedInAs(userId);
+      allow create, update: if signedInAs(userId) && validSnapshot();
+      allow delete:         if false;
+    }
+
+    /**
+     * Ledger entries sub-collection — append-only audit log.
+     *
+     * update, delete: if false — immutable once written.
+     * This ensures the financial audit trail cannot be tampered with
+     * even by the authenticated user.
+     */
+    match /ledgers/{userId}/entries/{entryId} {
+      allow read:   if signedInAs(userId);
+      allow create: if signedInAs(userId) && validLedgerEntry(userId);
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Security: Content Security Policy — restricts script/style/connect origins -->
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com;
+               img-src 'self' data: blob:;" />
+
+    <!-- Security: Prevent MIME type sniffing -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- Security: Prevent clickjacking -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- Security: Enable XSS protection in older browsers -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+
+    <!-- Security: Referrer policy for privacy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Security: Permissions policy for browser features -->
+    <meta http-equiv="Permissions-Policy"
+      content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=() " />
+
+    <!-- App identity -->
+    <title>LedgerX — Personal Finance &amp; Accounting</title>
+    <meta name="description" content="LedgerX — A modern, privacy-first accounting app with AES-256 encryption, invoicing, expense tracking, and optional cloud sync." />
+    <meta name="author" content="LedgerX" />
+    <meta name="theme-color" content="#6366f1" />
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="LedgerX — Personal Finance &amp; Accounting" />
+    <meta property="og:description" content="Privacy-first accounting with AES-256 encryption, invoicing, expenses, client management, and cloud sync." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="LedgerX" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@LedgerXApp" />
+    <meta name="twitter:title" content="LedgerX — Personal Finance &amp; Accounting" />
+    <meta name="twitter:description" content="Privacy-first accounting with AES-256 encryption, invoicing, expenses, and cloud sync." />
+    <meta name="twitter:image" content="/og-image.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
