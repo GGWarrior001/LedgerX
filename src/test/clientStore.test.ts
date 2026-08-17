@@ -15,8 +15,8 @@ describe('useClientStore', () => {
     expect(useClientStore.getState().clients).toEqual([]);
   });
 
-  it('adds a client with auto-generated fields', () => {
-    const client = useClientStore.getState().addClient({
+  it('adds a client with auto-generated fields', async () => {
+    const client = await useClientStore.getState().addClient({
       name: 'TechMate Solutions',
       city: 'Bangalore',
       email: 'contact@techmate.io',
@@ -35,23 +35,23 @@ describe('useClientStore', () => {
     expect(nextClientId).toBe(2);
   });
 
-  it('increments nextClientId', () => {
-    useClientStore.getState().addClient({ name: 'A', city: 'B', email: 'a@b.com', phone: '' });
-    useClientStore.getState().addClient({ name: 'C', city: 'D', email: 'c@d.com', phone: '' });
+  it('increments nextClientId', async () => {
+    await useClientStore.getState().addClient({ name: 'A', city: 'B', email: 'a@b.com', phone: '' });
+    await useClientStore.getState().addClient({ name: 'C', city: 'D', email: 'c@d.com', phone: '' });
     expect(useClientStore.getState().nextClientId).toBe(3);
     expect(useClientStore.getState().clients).toHaveLength(2);
   });
 
-  it('resets to empty state', () => {
-    useClientStore.getState().addClient({ name: 'A', city: 'B', email: 'a@b.com', phone: '' });
-    useClientStore.getState().reset();
+  it('resets to empty state', async () => {
+    await useClientStore.getState().addClient({ name: 'A', city: 'B', email: 'a@b.com', phone: '' });
+    await useClientStore.getState().reset();
     expect(useClientStore.getState().clients).toEqual([]);
     expect(useClientStore.getState().nextClientId).toBe(1);
   });
 
-  it('updates client billing stats', () => {
-    useClientStore.getState().addClient({ name: 'Acme', city: 'NYC', email: 'a@acme.com', phone: '' });
-    useClientStore.getState().updateClientBilling('Acme', 5000, 'sent');
+  it('updates client billing stats', async () => {
+    await useClientStore.getState().addClient({ name: 'Acme', city: 'NYC', email: 'a@acme.com', phone: '' });
+    await useClientStore.getState().updateClientBilling('Acme', 5000, 'sent');
 
     const acme = useClientStore.getState().clients.find(c => c.name === 'Acme');
     expect(acme?.billed).toBe(5000);
@@ -59,9 +59,9 @@ describe('useClientStore', () => {
     expect(acme?.invoices).toBe(1);
   });
 
-  it('treats overdue invoices as outstanding billing', () => {
-    useClientStore.getState().addClient({ name: 'Acme', city: 'NYC', email: 'a@acme.com', phone: '' });
-    useClientStore.getState().updateClientBilling('Acme', 7000, 'overdue');
+  it('treats overdue invoices as outstanding billing', async () => {
+    await useClientStore.getState().addClient({ name: 'Acme', city: 'NYC', email: 'a@acme.com', phone: '' });
+    await useClientStore.getState().updateClientBilling('Acme', 7000, 'overdue');
 
     const acme = useClientStore.getState().clients.find(c => c.name === 'Acme');
     expect(acme?.billed).toBe(7000);
@@ -69,11 +69,11 @@ describe('useClientStore', () => {
     expect(acme?.invoices).toBe(1);
   });
 
-  it('setClients replaces the entire list', () => {
+  it('setClients replaces the entire list', async () => {
     const newClients = [
       { id: 10, name: 'X', initials: 'X', color: '#000', city: '', email: '', phone: '', billed: 0, outstanding: 0, invoices: 0 },
     ];
-    useClientStore.getState().setClients(newClients, 11);
+    await useClientStore.getState().setClients(newClients, 11);
     expect(useClientStore.getState().clients).toEqual(newClients);
     expect(useClientStore.getState().nextClientId).toBe(11);
   });
