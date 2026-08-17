@@ -439,7 +439,7 @@ class StorageService {
     if (!this.encryptionKey) return;
 
     const keysToCheck = [...APP_DATA_KEYS];
-    let migrationCount = 0;
+    const migrationCount = 0;
 
     for (const key of keysToCheck) {
       try {

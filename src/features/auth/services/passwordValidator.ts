@@ -39,7 +39,7 @@ const MIN_LENGTH = 12;
 const UPPERCASE_REGEX = /[A-Z]/;
 const LOWERCASE_REGEX = /[a-z]/;
 const NUMBER_REGEX = /[0-9]/;
-const SYMBOL_REGEX = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/;
+const SYMBOL_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/;
 
 /**
  * Internal helper to evaluate password rules without side effects or circular calls.
@@ -197,10 +197,10 @@ function hasHighEntropy(password: string): boolean {
  */
 function hasComplexitySignals(password: string): boolean {
   // Check for balanced distribution of character types
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasNumbers = /[0-9]/.test(password);
-  const hasSymbols = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/.test(password);
+  const hasUppercase = UPPERCASE_REGEX.test(password);
+  const hasLowercase = LOWERCASE_REGEX.test(password);
+  const hasNumbers = NUMBER_REGEX.test(password);
+  const hasSymbols = SYMBOL_REGEX.test(password);
 
   // Count character type groups (max 4)
   const typeCount = [hasUppercase, hasLowercase, hasNumbers, hasSymbols].filter(Boolean)
@@ -213,8 +213,8 @@ function hasComplexitySignals(password: string): boolean {
 
   // Check position diversity: symbols/numbers spread throughout (not just at start/end)
   const middleRange = password.slice(1, -1);
-  const hasNumbersInMiddle = /[0-9]/.test(middleRange);
-  const hasSymbolsInMiddle = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/.test(middleRange);
+  const hasNumbersInMiddle = NUMBER_REGEX.test(middleRange);
+  const hasSymbolsInMiddle = SYMBOL_REGEX.test(middleRange);
 
   return hasNumbersInMiddle && hasSymbolsInMiddle;
 }
