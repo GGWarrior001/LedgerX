@@ -263,7 +263,7 @@ export async function encryptAES_GCM(
   // WebCrypto appends tag to ciphertext. Extract them:
   // - Last 16 bytes = authentication tag
   // - Everything before = ciphertext
-  const ciphertext = encrypted.slice(0, encrypted.byteLength - TAG_SIZE_BITS / 8);
+  const ciphertext = new Uint8Array(encrypted.slice(0, encrypted.byteLength - TAG_SIZE_BITS / 8));
   const tag = new Uint8Array(encrypted.slice(encrypted.byteLength - TAG_SIZE_BITS / 8));
 
   return { ciphertext, tag };
@@ -300,8 +300,8 @@ export async function decryptAES_GCM(
   if (!tag || tag.length !== TAG_SIZE_BITS / 8) {
     throw new Error(`Authentication tag must be exactly ${TAG_SIZE_BITS / 8} bytes`);
   }
-  if (!ciphertext || ciphertext.length === 0) {
-    throw new Error('Ciphertext cannot be empty');
+  if (!ciphertext) {
+    throw new Error('Ciphertext is required');
   }
 
   // Reconstruct the full encrypted buffer (ciphertext + tag)

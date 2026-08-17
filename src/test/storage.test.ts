@@ -221,9 +221,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with stored ciphertext
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const ctArray = Array.from(atob(envelope.ct));
-      ctArray[0] = String.fromCharCode(ctArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.ct = btoa(ctArray.join(''));
+      const ctArray = webCrypto.decodeBase64(envelope.ct);
+      ctArray[0] ^= 0xFF; // Flip bit
+      envelope.ct = webCrypto.encodeBase64(ctArray);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -239,9 +239,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with authentication tag
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const tagArray = Array.from(atob(envelope.tag));
-      tagArray[0] = String.fromCharCode(tagArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.tag = btoa(tagArray.join(''));
+      const tagArray = webCrypto.decodeBase64(envelope.tag);
+      tagArray[0] ^= 0xFF; // Flip bit
+      envelope.tag = webCrypto.encodeBase64(tagArray);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -257,9 +257,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with IV
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const ivArray = Array.from(atob(envelope.iv));
-      ivArray[0] = String.fromCharCode(ivArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.iv = btoa(ivArray.join(''));
+      const ivArray = webCrypto.decodeBase64(envelope.iv);
+      ivArray[0] ^= 0xFF; // Flip bit
+      envelope.iv = webCrypto.encodeBase64(ivArray);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -299,10 +299,10 @@ describe('StorageService – WebCrypto encryption layer', () => {
       // Corrupt 10 random bits
       for (let i = 0; i < 10; i++) {
         const stored = JSON.parse(localStorage.getItem('key')!);
-        const ctArray = Array.from(atob(stored.ct));
+        const ctArray = webCrypto.decodeBase64(stored.ct);
         const randomIndex = Math.floor(Math.random() * ctArray.length);
-        ctArray[randomIndex] = String.fromCharCode(ctArray.charCodeAt(randomIndex) ^ 0xFF);
-        stored.ct = btoa(ctArray.join(''));
+        ctArray[randomIndex] ^= 0xFF;
+        stored.ct = webCrypto.encodeBase64(ctArray);
         localStorage.setItem('key', JSON.stringify(stored));
 
         // Should always fail, never return corrupted data

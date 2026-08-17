@@ -238,17 +238,25 @@ class StorageService {
    */
   async load<T>(key: string, defaultValue: T): Promise<T> {
     try {
+      if (this.isEncryptionSetup() && !this.encryptionKey) {
+        throw new StorageLockedError();
+      }
+
       const raw = localStorage.getItem(key);
       if (!raw) return defaultValue;
 
+      if (raw === 'undefined') return undefined as T;
+
+      const hasEncryptionMarker = this.hasEncryptionMarker(raw);
       const envelope = this.parseEncryptedEnvelope(raw);
+      if (hasEncryptionMarker && !envelope) {
+        throw new StorageDecryptionError('Malformed encrypted envelope');
+      }
+
       if (envelope) {
         // v3 envelope (current AES-GCM)
         if (envelope.v === 3) {
-          if (!this.encryptionKey) {
-            throw new StorageLockedError();
-          }
-          const json = await this.decryptFromV3(envelope as EncryptedEnvelopeV3, this.encryptionKey);
+          const json = await this.decryptFromV3(envelope as EncryptedEnvelopeV3, this.encryptionKey!);
           return JSON.parse(json);
         }
       }
@@ -256,7 +264,7 @@ class StorageService {
       // Not an encrypted envelope - try to parse as plaintext
       return JSON.parse(raw);
     } catch (err) {
-      if (err instanceof StorageLockedError) throw err;
+      if (err instanceof StorageLockedError || err instanceof StorageDecryptionError) throw err;
       return defaultValue;
     }
   }
@@ -295,14 +303,12 @@ class StorageService {
    * Clears app data while preserving encryption settings.
    */
   clearAppData(): void {
-    const profile = localStorage.getItem('lx_profile');
     const dark = localStorage.getItem('lx_dark');
     const encKey = localStorage.getItem(ENCRYPTION_KEY_STORE);
     const encVerify = localStorage.getItem(ENCRYPTION_VERIFY_STORE);
 
     localStorage.clear();
 
-    if (profile) localStorage.setItem('lx_profile', profile);
     if (dark) localStorage.setItem('lx_dark', dark);
     if (encKey) localStorage.setItem(ENCRYPTION_KEY_STORE, encKey);
     if (encVerify) localStorage.setItem(ENCRYPTION_VERIFY_STORE, encVerify);
@@ -379,6 +385,18 @@ class StorageService {
     }
 
     return null;
+  }
+
+  /**
+   * Detects if payload claims to be an encrypted LedgerX envelope.
+   */
+  private hasEncryptionMarker(raw: string): boolean {
+    try {
+      const parsed = JSON.parse(raw) as { __ledgerx_encrypted?: unknown };
+      return parsed?.__ledgerx_encrypted === true;
+    } catch {
+      return false;
+    }
   }
 
   /**

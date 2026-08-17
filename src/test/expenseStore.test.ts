@@ -16,8 +16,8 @@ describe('useExpenseStore', () => {
     expect(useExpenseStore.getState().expenses).toEqual([]);
   });
 
-  it('adds an expense', () => {
-    const exp = useExpenseStore.getState().addExpense({
+  it('adds an expense', async () => {
+    const exp = await useExpenseStore.getState().addExpense({
       description: 'AWS Hosting',
       category: 'Cloud & Hosting',
       vendor: 'Amazon',
@@ -32,24 +32,24 @@ describe('useExpenseStore', () => {
     expect(useExpenseStore.getState().nextExpId).toBe(2);
   });
 
-  it('resets state', () => {
-    useExpenseStore.getState().addExpense({
+  it('resets state', async () => {
+    await useExpenseStore.getState().addExpense({
       description: 'test', category: 'test', vendor: 'test', date: '2025-01-01', receipt: 'pending', amount: 100,
     });
-    useExpenseStore.getState().reset();
+    await useExpenseStore.getState().reset();
     expect(useExpenseStore.getState().expenses).toEqual([]);
     expect(useExpenseStore.getState().nextExpId).toBe(1);
   });
 
-  it('updates vendor totalSpent through the expense service', () => {
-    useVendorStore.getState().addVendor({
+  it('updates vendor totalSpent through the expense service', async () => {
+    await useVendorStore.getState().addVendor({
       name: 'Amazon',
       city: 'Bangalore',
       email: 'billing@example.com',
       phone: '',
     });
 
-    expenseService.addExpense({
+    await expenseService.addExpense({
       description: 'AWS Hosting',
       category: 'Cloud & Hosting',
       vendor: 'Amazon',
