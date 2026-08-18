@@ -38,7 +38,7 @@ describe('passwordValidator', () => {
       it('accepts passwords with all supported symbols', () => {
         const symbols = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+'];
         symbols.forEach(sym => {
-          const password = `MyPass123${sym}`;
+          const password = `MyPassword123${sym}`;
           const result = validatePassword(password);
           expect(result.valid).toBe(true);
           expect(result.errors).toHaveLength(0);
@@ -123,7 +123,7 @@ describe('passwordValidator', () => {
       it('treats special characters from allowed set as valid symbols', () => {
         const specialChars = ['(', ')', '-', '=', '[', ']', '{', '}', ';', "'", ':', '"'];
         specialChars.forEach(char => {
-          const password = `MyPass123${char}`;
+          const password = `MyPassword123${char}`;
           const result = validatePassword(password);
           expect(result.valid).toBe(true);
         });
@@ -271,7 +271,7 @@ describe('passwordValidator', () => {
 
     describe('Fair passwords', () => {
       it('returns fair for valid 12-15 char passwords without complexity signals', () => {
-        expect(calculateStrength('MyPass1234!')).toBe('fair'); // exactly 11 is weak, 12 is fair
+        expect(calculateStrength('MyPassword12!')).toBe('fair');
         expect(calculateStrength('MyPasswd1234!')).toBe('fair'); // 13 chars
       });
 

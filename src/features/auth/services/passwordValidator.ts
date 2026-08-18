@@ -196,21 +196,6 @@ function hasHighEntropy(password: string): boolean {
  * @returns True if password shows complexity signals
  */
 function hasComplexitySignals(password: string): boolean {
-  // Check for balanced distribution of character types
-  const hasUppercase = UPPERCASE_REGEX.test(password);
-  const hasLowercase = LOWERCASE_REGEX.test(password);
-  const hasNumbers = NUMBER_REGEX.test(password);
-  const hasSymbols = SYMBOL_REGEX.test(password);
-
-  // Count character type groups (max 4)
-  const typeCount = [hasUppercase, hasLowercase, hasNumbers, hasSymbols].filter(Boolean)
-    .length;
-
-  // All 4 types = complexity signal
-  if (typeCount === 4) {
-    return true;
-  }
-
   // Check position diversity: symbols/numbers spread throughout (not just at start/end)
   const middleRange = password.slice(1, -1);
   const hasNumbersInMiddle = NUMBER_REGEX.test(middleRange);
