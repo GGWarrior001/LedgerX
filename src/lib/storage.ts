@@ -256,7 +256,7 @@ class StorageService {
       // Not an encrypted envelope - try to parse as plaintext
       return JSON.parse(raw);
     } catch (err) {
-      if (err instanceof StorageLockedError) throw err;
+      if (err instanceof StorageLockedError || err instanceof StorageDecryptionError) throw err;
       return defaultValue;
     }
   }
@@ -360,7 +360,7 @@ class StorageService {
     try {
       const parsed = JSON.parse(raw) as Partial<EncryptedEnvelope>;
 
-      if (!parsed || parsed.__ledgerx_encrypted !== true) {
+      if (!parsed || typeof parsed !== 'object' || parsed.__ledgerx_encrypted !== true) {
         return null;
       }
 
@@ -373,12 +373,21 @@ class StorageService {
         ) {
           return parsed as EncryptedEnvelopeV3;
         }
+        throw new StorageDecryptionError('Malformed v3 encrypted envelope');
       }
-    } catch {
-      // Not JSON - continue to plaintext parsing
-    }
 
-    return null;
+      if (parsed.v === 2) {
+        if (parsed.alg === 'AES-CryptoJS' && typeof parsed.ct === 'string') {
+          return parsed as EncryptedEnvelopeV2;
+        }
+        throw new StorageDecryptionError('Malformed v2 encrypted envelope');
+      }
+
+      throw new StorageDecryptionError(`Unsupported envelope version: ${parsed.v}`);
+    } catch (err) {
+      if (err instanceof StorageDecryptionError) throw err;
+      return null;
+    }
   }
 
   /**

@@ -101,7 +101,7 @@ class StorageService {
       }
       return JSON.parse(raw) as T;
     } catch (err) {
-      if (err instanceof StorageLockedError) throw err;
+      if (err instanceof StorageLockedError || err instanceof StorageDecryptionError) throw err;
       return defaultValue;
     }
   }
@@ -258,10 +258,11 @@ class StorageService {
     try {
       const p = JSON.parse(raw) as Partial<EncryptedEnvelope>;
       if (!p || p.__ledgerx_encrypted !== true) return null;
-      if (p.v === 4) { const e = p as Partial<EncryptedEnvelopeV4>; if (e.alg === 'AES-GCM' && e.iv && e.ct && e.tag) return p as EncryptedEnvelopeV4; }
-      if (p.v === 3) { const e = p as Partial<EncryptedEnvelopeV3>; if (e.alg === 'AES-GCM' && e.iv && e.ct && e.tag) return p as EncryptedEnvelopeV3; }
-      if (p.v === 2) { const e = p as Partial<EncryptedEnvelopeV2>; if (e.alg === 'AES-CryptoJS' && e.ct) return p as EncryptedEnvelopeV2; }
-    } catch { /* not JSON */ }
+      if (p.v === 4) { const e = p as Partial<EncryptedEnvelopeV4>; if (e.alg === 'AES-GCM' && e.iv && e.ct && e.tag) return p as EncryptedEnvelopeV4; throw new StorageDecryptionError('Malformed v4 encrypted envelope'); }
+      if (p.v === 3) { const e = p as Partial<EncryptedEnvelopeV3>; if (e.alg === 'AES-GCM' && e.iv && e.ct && e.tag) return p as EncryptedEnvelopeV3; throw new StorageDecryptionError('Malformed v3 encrypted envelope'); }
+      if (p.v === 2) { const e = p as Partial<EncryptedEnvelopeV2>; if (e.alg === 'AES-CryptoJS' && e.ct) return p as EncryptedEnvelopeV2; throw new StorageDecryptionError('Malformed v2 encrypted envelope'); }
+      throw new StorageDecryptionError(`Unsupported envelope version: ${p.v}`);
+    } catch (err) { if (err instanceof StorageDecryptionError) throw err; }
     return null;
   }
 

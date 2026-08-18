@@ -221,9 +221,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with stored ciphertext
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const ctArray = Array.from(atob(envelope.ct));
-      ctArray[0] = String.fromCharCode(ctArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.ct = btoa(ctArray.join(''));
+      const ctBytes = webCrypto.decodeBase64(envelope.ct);
+      ctBytes[0] ^= 0xFF; // Flip bit
+      envelope.ct = webCrypto.encodeBase64(ctBytes);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -239,9 +239,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with authentication tag
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const tagArray = Array.from(atob(envelope.tag));
-      tagArray[0] = String.fromCharCode(tagArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.tag = btoa(tagArray.join(''));
+      const tagBytes = webCrypto.decodeBase64(envelope.tag);
+      tagBytes[0] ^= 0xFF; // Flip bit
+      envelope.tag = webCrypto.encodeBase64(tagBytes);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -257,9 +257,9 @@ describe('StorageService – WebCrypto encryption layer', () => {
 
       // Tamper with IV
       const envelope = JSON.parse(localStorage.getItem('key')!);
-      const ivArray = Array.from(atob(envelope.iv));
-      ivArray[0] = String.fromCharCode(ivArray.charCodeAt(0) ^ 0xFF); // Flip bit
-      envelope.iv = btoa(ivArray.join(''));
+      const ivBytes = webCrypto.decodeBase64(envelope.iv);
+      ivBytes[0] ^= 0xFF; // Flip bit
+      envelope.iv = webCrypto.encodeBase64(ivBytes);
       localStorage.setItem('key', JSON.stringify(envelope));
 
       // Load should fail
@@ -293,16 +293,13 @@ describe('StorageService – WebCrypto encryption layer', () => {
       // Save data
       await storage.save('key', { sensitive: 'data' });
 
-      // Get stored envelope
-      const envelope = JSON.parse(localStorage.getItem('key')!);
-
-      // Corrupt 10 random bits
+      // Corrupt random bits
       for (let i = 0; i < 10; i++) {
         const stored = JSON.parse(localStorage.getItem('key')!);
-        const ctArray = Array.from(atob(stored.ct));
-        const randomIndex = Math.floor(Math.random() * ctArray.length);
-        ctArray[randomIndex] = String.fromCharCode(ctArray.charCodeAt(randomIndex) ^ 0xFF);
-        stored.ct = btoa(ctArray.join(''));
+        const ctBytes = webCrypto.decodeBase64(stored.ct);
+        const randomIndex = Math.floor(Math.random() * ctBytes.length);
+        ctBytes[randomIndex] ^= 0xFF;
+        stored.ct = webCrypto.encodeBase64(ctBytes);
         localStorage.setItem('key', JSON.stringify(stored));
 
         // Should always fail, never return corrupted data
@@ -890,10 +887,10 @@ describe('StorageService – WebCrypto encryption layer', () => {
       const verifier = JSON.parse(localStorage.getItem('lx_enc_verify')!);
 
       // Should be decodable
-      const salt = Buffer.from(verifier.salt, 'base64');
-      const iv = Buffer.from(verifier.verify.iv, 'base64');
-      const ct = Buffer.from(verifier.verify.ct, 'base64');
-      const tag = Buffer.from(verifier.verify.tag, 'base64');
+      const salt = webCrypto.decodeBase64(verifier.salt);
+      const iv = webCrypto.decodeBase64(verifier.verify.iv);
+      const ct = webCrypto.decodeBase64(verifier.verify.ct);
+      const tag = webCrypto.decodeBase64(verifier.verify.tag);
 
       expect(salt.length).toBe(16);
       expect(iv.length).toBe(12);
