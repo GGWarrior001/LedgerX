@@ -55,7 +55,7 @@ jobs:
         run: npm run build
 
   android:
-    name: Build Android AAB
+    name: Build Android APK & AAB
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     needs: verify
@@ -90,30 +90,48 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
+      - name: Validate Android signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for var_name in ANDROID_KEYSTORE_BASE64 ANDROID_KEY_ALIAS ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD; do
+            eval "var_value=\${$var_name}"
+            if [ -z "$var_value" ]; then
+              echo "Missing required secret: $var_name" >&2
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
       - name: Decode Android release keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Missing ANDROID_KEYSTORE_BASE64 secret." >&2
-            exit 1
-          fi
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.keystore
 
-      - name: Build signed release AAB
+      - name: Build signed release APK & AAB
         working-directory: android
         env:
           ANDROID_KEYSTORE_PATH: android/release.keystore
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease
+        run: ./gradlew --no-daemon clean :app:assembleRelease :app:bundleRelease
 
-      - name: Upload Android artifact
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: LedgerX-android-aab
-          path: android/app/build/outputs/bundle/release/*.aab
+          name: LedgerX-android
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
   electron:

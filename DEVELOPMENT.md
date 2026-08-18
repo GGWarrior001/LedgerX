@@ -242,6 +242,10 @@ npx cap open android       # open Android Studio
 # In Android Studio: Run ▶ or Build → Generate Signed APK
 ```
 
+For CI releases, GitHub Actions builds **both signed APK and AAB** using
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEYSTORE_PASSWORD`, and `ANDROID_KEY_PASSWORD` repository secrets.
+
 ---
 
 ## Debugging
