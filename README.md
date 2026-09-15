@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./banner.png" alt="LedgerX Banner" width="100%">
+</p>
+
 # LedgerX
 
 Modern, privacy-first personal finance and accounting software with encrypted local storage, optional cloud sync, and offline-first workflows.
