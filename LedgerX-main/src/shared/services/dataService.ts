@@ -16,7 +16,7 @@ import {
   DEFAULT_CLIENTS,
   DEFAULT_VENDORS,
 } from '@/lib/constants';
-import type { Invoice, Expense, Client, Vendor, Profile } from '@/lib/types';
+import type { Invoice, Expense, Client, Vendor, Profile, AppSettings, Notification } from '@/lib/types';
 import {
   safeNextId,
   sanitizeClients,
@@ -29,7 +29,7 @@ import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
 import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useClientStore }  from '@/features/clients/store/useClientStore';
 import { useVendorStore }  from '@/features/vendors/store/useVendorStore';
-import { useAppStore }     from '../stores/useAppStore';
+import { useAppStore, DEFAULT_SETTINGS } from '../stores/useAppStore';
 
 export const dataService = {
   /**
@@ -180,8 +180,8 @@ export const dataService = {
 
       const nextInvId = safeNextId(invoices, data.nextInvId);
       const nextExpId = safeNextId(expenses, data.nextExpId);
-      const nextCliId = safeNextId(clients, data.nextClientId);
-      const nextVenId = safeNextId(vendors, data.nextVendorId);
+      const nextCliId = safeNextId(clients, data.nextClientId ?? data.nextCliId);
+      const nextVenId = safeNextId(vendors, data.nextVendorId ?? data.nextVenId);
 
       // Persist imported data to storage
       await Promise.all([
@@ -203,6 +203,12 @@ export const dataService = {
       const profile = sanitizeProfile(data.profile);
       if (profile) {
         await useAppStore.getState().setProfile(profile);
+      }
+
+      if (data.settings && typeof data.settings === 'object') {
+        const settings = data.settings as AppSettings;
+        await storage.save('lx_settings', settings);
+        await useAppStore.getState().setSettings(settings);
       }
 
       await useAppStore.getState().rebuildNotifications(invoices);

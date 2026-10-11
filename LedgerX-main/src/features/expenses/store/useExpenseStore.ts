@@ -10,7 +10,7 @@ interface ExpenseStoreState {
   nextExpId: number;
 
   addExpense: (exp: Omit<Expense, 'id'>) => Promise<Expense>;
-  hydrate:    (expenses: Expense[], nextId: number) => Promise<void>;
+  hydrate:    (expenses: Expense[], nextId: number) => void | Promise<void>;
   reset:      () => Promise<void>;
 }
 
@@ -46,15 +46,8 @@ export const useExpenseStore = create<ExpenseStoreState>((set, get) => ({
     }
   },
 
-  hydrate: async (expenses, nextId) => {
-    try {
-      await storage.save('lx_expenses', expenses);
-      await storage.save('lx_exp_id', nextId);
-      set({ expenses, nextExpId: nextId });
-    } catch (err) {
-      console.error('[LedgerX] Failed to hydrate expenses:', err);
-      throw err;
-    }
+  hydrate: (expenses, nextId) => {
+    set({ expenses, nextExpId: nextId });
   },
 
   reset: async () => {

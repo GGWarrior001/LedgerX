@@ -17,8 +17,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "electron": "electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "electron:build:mac": "vite build && electron-builder --mac",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:check": "npm run lint && npm run typecheck && npm run security:audit"
   },
   "build": {
     "appId": "com.ledgerx.app",
@@ -36,6 +41,13 @@
         "AppImage"
       ],
       "maintainer": "Tharun"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.finance"
     },
     "win": {
       "target": [

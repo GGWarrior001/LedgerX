@@ -67,9 +67,15 @@ export class StorageLockedOutError extends Error {
   }
 }
 
+function isQuotaError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'QuotaExceededError';
+}
+
 class StorageService {
   private encryptionKey:  CryptoKey | null = null;
   private encryptionMeta: { salt: Uint8Array; iterations: number } | null = null;
+  /** Encrypted envelopes that failed to write due to quota — cached so a later load() decrypts them normally. */
+  private pendingWrites = new Map<string, string>();
 
   isEncryptionSetup(): boolean { return localStorage.getItem(ENCRYPTION_KEY_STORE) === '1'; }
   isUnlocked(): boolean { return this.encryptionKey !== null || !this.isEncryptionSetup(); }
@@ -83,9 +89,15 @@ class StorageService {
     } catch { return defaultValue; }
   }
 
+  private readRaw(key: string): string | null {
+    const pending = this.pendingWrites.get(key);
+    if (pending !== undefined) return pending;
+    return localStorage.getItem(key);
+  }
+
   async load<T>(key: string, defaultValue: T): Promise<T> {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = this.readRaw(key);
       if (!raw) return defaultValue;
       const envelope = this.parseEnvelope(raw);
       if (envelope) {
@@ -111,9 +123,28 @@ class StorageService {
     if (this.isEncryptionSetup() && !this.encryptionKey)
       throw new StorageLockedError(`Refusing plaintext write to ${key} while locked`);
     if (this.isEncryptionSetup() && this.encryptionKey) {
-      localStorage.setItem(key, JSON.stringify(await this.encryptV4(json)));
+      const toWrite = JSON.stringify(await this.encryptV4(json));
+      try {
+        localStorage.setItem(key, toWrite);
+        this.pendingWrites.delete(key);
+      } catch (err) {
+        if (isQuotaError(err)) {
+          // Encryption succeeded — only the write didn't land.
+          // Cache the encrypted envelope so a later load() decrypts it normally.
+          this.pendingWrites.set(key, toWrite);
+        }
+        throw err;
+      }
     } else {
-      localStorage.setItem(key, json);
+      try {
+        localStorage.setItem(key, json);
+        this.pendingWrites.delete(key);
+      } catch (err) {
+        if (isQuotaError(err)) {
+          this.pendingWrites.set(key, json);
+        }
+        throw err;
+      }
     }
   }
 
@@ -293,17 +324,36 @@ class StorageService {
   private async encryptLegacyPlaintext(): Promise<void> {
     if (!this.isEncryptionSetup() || !this.encryptionKey) return;
     for (const key of APP_DATA_KEYS) {
-      const raw = localStorage.getItem(key);
+      const raw = this.readRaw(key);
       if (!raw || this.parseEnvelope(raw)) continue;
-      try { localStorage.setItem(key, JSON.stringify(await this.encryptV4(raw))); }
-      catch { /* not valid JSON */ }
+      try {
+        const toWrite = JSON.stringify(await this.encryptV4(raw));
+        localStorage.setItem(key, toWrite);
+        this.pendingWrites.delete(key);
+      } catch (err) {
+        if (isQuotaError(err)) {
+          // The encryption itself succeeded — only the write didn't land.
+          // Cache the encrypted envelope (not the plaintext) so a later
+          // load() decrypts it normally instead of the key being silently
+          // stuck as unencrypted-in-memory. Matches the save()/
+          // changePasscode() pattern: pendingWrites always holds exactly
+          // what would have been written to localStorage.
+          try {
+            const toWrite = JSON.stringify(await this.encryptV4(raw));
+            this.pendingWrites.set(key, toWrite);
+          } catch (err2) {
+            console.error(`[storage] Legacy-plaintext encrypt failed for ${key}:`, err2);
+          }
+        }
+        // else: raw wasn't encryptable for some other reason — skip, as before.
+      }
     }
   }
 
   private runV2Migration(): void {
     for (const key of APP_DATA_KEYS) {
       try {
-        const raw = localStorage.getItem(key);
+        const raw = this.readRaw(key);
         if (!raw) continue;
         const env = this.parseEnvelope(raw);
         if (env?.v === 2) console.warn(`[storage] v2 at "${key}" — see src/lib/v2Migration.ts`);

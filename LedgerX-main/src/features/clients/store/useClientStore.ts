@@ -38,9 +38,9 @@ interface ClientStoreState {
     status:     string,
   ) => Promise<void>;
 
-  hydrate:    (clients: Client[], nextId: number) => Promise<void>;
+  hydrate:    (clients: Client[], nextId: number) => void | Promise<void>;
   /** Alias for hydrate. */
-  setClients: (clients: Client[], nextId: number) => Promise<void>;
+  setClients: (clients: Client[], nextId: number) => void | Promise<void>;
   reset:      () => Promise<void>;
 }
 
@@ -113,26 +113,12 @@ export const useClientStore = create<ClientStoreState>((set, get) => ({
     await get().updateClientStats(clientName, amount, isOutstanding);
   },
 
-  hydrate: async (clients, nextId) => {
-    try {
-      await storage.save('lx_clients', clients);
-      await storage.save('lx_cli_id', nextId);
-      set({ clients, nextClientId: nextId });
-    } catch (err) {
-      console.error('[LedgerX] Failed to hydrate clients:', err);
-      throw err;
-    }
+  hydrate: (clients, nextId) => {
+    set({ clients, nextClientId: nextId });
   },
 
-  setClients: async (clients, nextId) => {
-    try {
-      await storage.save('lx_clients', clients);
-      await storage.save('lx_cli_id', nextId);
-      set({ clients, nextClientId: nextId });
-    } catch (err) {
-      console.error('[LedgerX] Failed to set clients:', err);
-      throw err;
-    }
+  setClients: (clients, nextId) => {
+    set({ clients, nextClientId: nextId });
   },
 
   reset: async () => {

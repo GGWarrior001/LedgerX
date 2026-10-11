@@ -20,7 +20,7 @@ interface InvoiceStoreState {
     inv: Omit<Invoice, 'id' | 'number' | 'clientInitials' | 'clientColor'>,
   ) => Promise<Invoice>;
 
-  hydrate: (invoices: Invoice[], nextId: number) => Promise<void>;
+  hydrate: (invoices: Invoice[], nextId: number) => void | Promise<void>;
   reset:   () => Promise<void>;
 }
 
@@ -65,15 +65,8 @@ export const useInvoiceStore = create<InvoiceStoreState>((set, get) => ({
     }
   },
 
-  hydrate: async (invoices, nextId) => {
-    try {
-      await storage.save('lx_invoices', invoices);
-      await storage.save('lx_inv_id', nextId);
-      set({ invoices, nextInvId: nextId });
-    } catch (err) {
-      console.error('[LedgerX] Failed to hydrate invoices:', err);
-      throw err;
-    }
+  hydrate: (invoices, nextId) => {
+    set({ invoices, nextInvId: nextId });
   },
 
   reset: async () => {

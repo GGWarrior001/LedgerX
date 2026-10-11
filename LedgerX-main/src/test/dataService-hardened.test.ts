@@ -58,12 +58,14 @@ vi.mock('@/features/vendors/store/useVendorStore', () => ({
 const mockSetNotifications  = vi.fn(async () => {});
 const mockRebuildNotifs     = vi.fn(async () => {});
 const mockSetProfile        = vi.fn(async () => {});
+const mockSetSettings       = vi.fn(async () => {});
 vi.mock('@/shared/stores/useAppStore', () => ({
   useAppStore: {
     getState: () => ({
       setNotifications:      mockSetNotifications,
       rebuildNotifications:  mockRebuildNotifs,
       setProfile:            mockSetProfile,
+      setSettings:           mockSetSettings,
     }),
   },
 }));
@@ -227,6 +229,16 @@ describe('dataService.importData', () => {
   it('handles missing profile gracefully (no setProfile call)', async () => {
     await dataService.importData({ ...validImport, profile: undefined });
     expect(mockSetProfile).not.toHaveBeenCalled();
+  });
+
+  it('persists imported settings to storage and store', async () => {
+    const importWithSettings = {
+      ...validImport,
+      settings: { sessionTimeout: 5, privacyMode: true, encryptionEnabled: false },
+    };
+    await dataService.importData(importWithSettings);
+    expect(storageMod.save).toHaveBeenCalledWith('lx_settings', importWithSettings.settings);
+    expect(mockSetSettings).toHaveBeenCalledWith(importWithSettings.settings);
   });
 
   it('rebuilds notifications after import', async () => {

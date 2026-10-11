@@ -13,7 +13,7 @@
  * data loading, auth state, cloud sync). Only the additions are annotated.
  */
 
-import { useEffect, useCallback, lazy, Suspense } from 'react';
+import { useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { useAuthStore }    from '@/features/auth/store/useAuthStore';
 import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
@@ -22,7 +22,7 @@ import { useClientStore }  from '@/features/clients/store/useClientStore';
 import { useVendorStore }  from '@/features/vendors/store/useVendorStore';
 import { authService }     from '@/features/auth/services/authService';
 import { dataService }     from '@/shared/services/dataService';
-import { saveCloudData }   from '@/lib/firestoreSync';
+import { saveCloudData, fetchCloudData } from '@/lib/firestoreSync';
 import { storage }         from '@/lib/storage';
 import { useIdleLock }     from '@/hooks/useIdleLock';   // ← NEW: Phase 3 / H-6
 import AutoLock            from '@/features/auth/components/AutoLock';
@@ -90,6 +90,29 @@ export function AppShell() {
     const unsubscribe = authService.init();
     return unsubscribe;
   }, []);
+
+  // ── Initial cloud sync on sign-in (wise-kalam) ─────────────────────────────
+  const lastSyncedUid = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (locked) return;
+    if (lastSyncedUid.current === user.uid) return;
+
+    const doInitialSync = async () => {
+      try {
+        const cloud = await fetchCloudData(user.uid);
+        if (cloud) {
+          await dataService.importData(cloud);
+        }
+      } catch (err) {
+        console.error('[AppShell] Initial cloud sync failed:', err);
+      } finally {
+        lastSyncedUid.current = user.uid;
+      }
+    };
+
+    doInitialSync();
+  }, [user?.uid, locked]);
 
   // ── Cloud sync: enqueue on data change (H-3 fix: no longer silent failure) ─
   useEffect(() => {

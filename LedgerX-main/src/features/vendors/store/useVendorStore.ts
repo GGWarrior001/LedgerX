@@ -20,7 +20,7 @@ interface VendorStoreState {
   ) => Promise<Vendor>;
 
   updateVendorSpending: (vendorName: string, amount: number) => Promise<void>;
-  hydrate: (vendors: Vendor[], nextId: number) => Promise<void>;
+  hydrate: (vendors: Vendor[], nextId: number) => void | Promise<void>;
   reset:   () => Promise<void>;
 }
 
@@ -81,15 +81,8 @@ export const useVendorStore = create<VendorStoreState>((set, get) => ({
     }
   },
 
-  hydrate: async (vendors, nextId) => {
-    try {
-      await storage.save('lx_vendors', vendors);
-      await storage.save('lx_ven_id', nextId);
-      set({ vendors, nextVendorId: nextId });
-    } catch (err) {
-      console.error('[LedgerX] Failed to hydrate vendors:', err);
-      throw err;
-    }
+  hydrate: (vendors, nextId) => {
+    set({ vendors, nextVendorId: nextId });
   },
 
   reset: async () => {

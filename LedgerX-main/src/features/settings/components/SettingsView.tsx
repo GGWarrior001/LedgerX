@@ -14,7 +14,7 @@
  *   - Sign in / sign out
  *   - Reset Data
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore }   from '@/shared/stores/useAppStore';
 import { useAuthStore }  from '@/features/auth/store/useAuthStore';
 import { authService }   from '@/features/auth/services/authService';
@@ -39,6 +39,7 @@ export default function SettingsView() {
   const unlocking        = useAppStore(s => s.unlocking);
   const settings         = useAppStore(s => s.settings);
   const saveSettingsFn   = useAppStore(s => s.saveSettings);
+  const saveProfileFn    = useAppStore(s => s.saveProfile);
   const setupEncryption  = useAppStore(s => s.setupEncryption);
   const isEncrypted      = storage.isEncryptionSetup();
 
