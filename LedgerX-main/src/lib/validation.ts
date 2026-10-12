@@ -22,7 +22,7 @@ import type { Client, Expense, Invoice, Profile, Vendor } from './types';
  */
 const boundedString = (max: number) =>
   z.string()
-    .transform(s => s.replace(/\x00/g, '').trim())
+    .transform(s => s.replace(/\u0000/g, '').trim())
     .pipe(z.string().max(max));
 
 const money = z.coerce
@@ -56,7 +56,7 @@ const colorString = z.string()
   .trim()
   .max(24)
   .refine(
-    (v) => v === '' || /^(#[0-9a-fA-F]{3,8}|[a-z\-]{2,20})$/.test(v),
+    (v) => v === '' || /^(#[0-9a-fA-F]{3,8}|[a-z-]{2,20})$/.test(v),
     { message: 'Invalid color value' }
   );
 

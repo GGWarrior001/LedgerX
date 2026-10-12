@@ -29,6 +29,7 @@ vi.mock('@/lib/firebase', () => ({
 }));
 
 import * as firestore from 'firebase/firestore';
+import type { DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import { syncHealth, saveCloudData, resolveCloudConflict } from './firestoreSync';
 import type { CloudData } from './firestoreSync';
 
@@ -145,7 +146,7 @@ describe('resolveCloudConflict – last-write-wins', () => {
   });
 
   it('returns null when cloud data does not exist', async () => {
-    vi.mocked(firestore.getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(firestore.getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot<DocumentData>);
     const result = await resolveCloudConflict('user-123', Date.now());
     expect(result).toBeNull();
   });
@@ -158,7 +159,7 @@ describe('resolveCloudConflict – last-write-wins', () => {
         ...MOCK_CLOUD_DATA,
         updatedAt: { toMillis: () => cloudTime },
       }),
-    } as any);
+    } as unknown as DocumentSnapshot<DocumentData>);
 
     const result = await resolveCloudConflict('user-123', Date.now());
     expect(result).not.toBeNull();
@@ -172,7 +173,7 @@ describe('resolveCloudConflict – last-write-wins', () => {
         ...MOCK_CLOUD_DATA,
         updatedAt: { toMillis: () => cloudTime },
       }),
-    } as any);
+    } as unknown as DocumentSnapshot<DocumentData>);
 
     const result = await resolveCloudConflict('user-123', Date.now());
     expect(result).toBeNull();

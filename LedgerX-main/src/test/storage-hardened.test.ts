@@ -121,7 +121,7 @@ describe('changePasscode – key rotation', () => {
     expect(unlocked).toBe(true);
 
     // Data is accessible with new passcode
-    const loaded = await storage.load<typeof testData>('lx_invoices', null as any);
+    const loaded = await storage.load<typeof testData>('lx_invoices', null as unknown as typeof testData);
     expect(loaded).not.toBeNull();
     expect(loaded!.invoices[0].amount).toBe(50000);
   });
@@ -273,7 +273,7 @@ describe('v4 envelope format', () => {
     await storage.setupEncryption('TestPass123!');
     await storage.save('lx_round_trip', testData);
 
-    const loaded = await storage.load<typeof testData>('lx_round_trip', null as any);
+    const loaded = await storage.load<typeof testData>('lx_round_trip', null as unknown as typeof testData);
     expect(loaded).toEqual(testData);
   });
 });

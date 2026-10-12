@@ -66,7 +66,7 @@ describe('Integration: Encryption lifecycle', () => {
     // 6. Read all
     const loadedInvoices = await storage.load<typeof invoices>('lx_invoices', []);
     const loadedExpenses = await storage.load<typeof expenses>('lx_expenses', []);
-    const loadedProfile  = await storage.load<typeof profile>('lx_profile',   null as any);
+    const loadedProfile  = await storage.load<typeof profile>('lx_profile',   null as unknown as typeof profile);
 
     expect(loadedInvoices).toEqual(invoices);
     expect(loadedExpenses).toEqual(expenses);
@@ -93,7 +93,7 @@ describe('Integration: Encryption lifecycle', () => {
     expect(await storage.unlock('NewPass456!')).toBe(true);
 
     // Data intact
-    const loaded = await storage.load<typeof data>('lx_invoices', null as any);
+    const loaded = await storage.load<typeof data>('lx_invoices', null as unknown as typeof data);
     expect(loaded).toEqual(data);
   });
 
