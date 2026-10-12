@@ -22,7 +22,7 @@ import type { Client, Expense, Invoice, Profile, Vendor } from './types';
  */
 const boundedString = (max: number) =>
   z.string()
-    .transform(s => s.replace(/\u0000/g, '').trim())
+    .transform(s => s.replace(new RegExp(String.fromCharCode(0), 'g'), '').trim())
     .pipe(z.string().max(max));
 
 const money = z.coerce
