@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  data_extraction_rules.xml – Android 12+ backup policy (HARDENED v4)
+
+  Fix H-7: Excludes WebView localStorage (which contains encrypted financial
+  data and PBKDF2 verifiers) from Android Auto Backup and Cloud Backup.
+
+  Rationale:
+  - The encryption verifier stored in localStorage contains the PBKDF2 salt
+    and an AES-GCM encrypted verification blob. While the financial data itself
+    is AES-GCM encrypted, restoring this data to a different device without the
+    user's passcode provides no benefit — and risks user confusion when they
+    discover their "backup" is inaccessible.
+  - SharedPreferences are excluded for the same reason.
+  - The app's own databases are excluded; LedgerX uses localStorage (WebView),
+    not SQLite, so `databases/` would only contain Capacitor internals.
+
+  Paths excluded:
+    /data/data/com.ledgerx.app/app_webview/   — Chromium WebView data
+    /data/data/com.ledgerx.app/shared_prefs/  — SharedPreferences (Capacitor)
+    /data/data/com.ledgerx.app/databases/     — Any SQLite databases (Capacitor)
+-->
+<data-extraction-rules>
+  <cloud-backup>
+    <exclude domain="root" path="app_webview"/>
+    <exclude domain="sharedpref" path="."/>
+    <exclude domain="database" path="."/>
+    <exclude domain="file" path="."/>
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="root" path="app_webview"/>
+    <exclude domain="sharedpref" path="."/>
+    <exclude domain="database" path="."/>
+    <exclude domain="file" path="."/>
+  </device-transfer>
+</data-extraction-rules>
