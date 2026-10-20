@@ -12,6 +12,16 @@ export default defineConfig({
       "firebase/auth": path.resolve(__dirname, "./src/test/mocks/firebase-auth.ts"),
       "firebase/app": path.resolve(__dirname, "./src/test/mocks/firebase-app.ts"),
     },
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+        isolate: true
+      }
+    },
+    maxWorkers: 1,
+    minWorkers: 1,
+    fileParallelism: false
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
