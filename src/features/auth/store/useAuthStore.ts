@@ -60,6 +60,8 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     if (storage.isEncryptionSetup() && !storage.isUnlocked()) return;
     storage.save('lx_local_user', DEFAULT_LOCAL_USER);
     set({ localUser: DEFAULT_LOCAL_USER });
+    // Note: Financial data clearing is handled by AppShell on auth transitions
+    // to prevent race conditions and accidental cloud writes
   },
   openAuthModal: (mode = 'sign-in') => set({ authModalOpen: true, authMode: mode }),
   closeAuthModal: () => set({ authModalOpen: false, error: null }),

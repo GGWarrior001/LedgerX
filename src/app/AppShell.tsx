@@ -93,21 +93,58 @@ export default function AppShell() {
 
   // ── Initial cloud sync on sign-in (wise-kalam) ─────────────────────────────
   const lastSyncedUid = useRef<string | null>(null);
+  const prevUidRef = useRef<string | null>(null);
   useEffect(() => {
+    const currentUid = user?.uid ?? null;
+    if (prevUidRef.current !== currentUid) {
+      // Account context changed - clear financial data before loading new context
+      const prevUid = prevUidRef.current;
+      prevUidRef.current = currentUid;
+      if (!currentUid) {
+        // Signed out to guest mode - clear authenticated data
+        (async () => {
+          try {
+            await dataService.loadFreshData();
+          } catch (err) {
+            console.error('[AppShell] Failed to clear data on sign-out:', err);
+          }
+        })();
+        lastSyncedUid.current = null;
+        return;
+      }
+      // Switched to a different account
+      if (prevUid) {
+        (async () => {
+          try {
+            await dataService.loadFreshData();
+          } catch (err) {
+            console.error('[AppShell] Failed to clear data on account switch:', err);
+          }
+        })();
+        lastSyncedUid.current = null;
+      }
+    }
+
     if (!user?.uid) return;
     if (locked) return;
     if (lastSyncedUid.current === user.uid) return;
 
     const doInitialSync = async () => {
+      const syncUid = user.uid;
       try {
-        const cloud = await fetchCloudData(user.uid);
+        const cloud = await fetchCloudData(syncUid);
+        // Prevent delayed responses from overwriting different account
+        if ((user?.uid ?? null) !== syncUid) return;
         if (cloud) {
           await dataService.importData(cloud);
+          if ((user?.uid ?? null) !== syncUid) return;
         }
       } catch (err) {
         console.error('[AppShell] Initial cloud sync failed:', err);
       } finally {
-        lastSyncedUid.current = user.uid;
+        if ((user?.uid ?? null) === syncUid) {
+          lastSyncedUid.current = user.uid;
+        }
       }
     };
 
@@ -116,7 +153,8 @@ export default function AppShell() {
 
   // ── Cloud sync: enqueue on data change (H-3 fix: no longer silent failure) ─
   useEffect(() => {
-    if (!user?.uid) return;
+    const saveUid = user?.uid ?? null;
+    if (!saveUid) return;
     if (locked) return;
 
     const nextInvId    = useInvoiceStore.getState().nextId;
@@ -124,8 +162,11 @@ export default function AppShell() {
     const nextClientId = useClientStore.getState().nextId;
     const nextVendorId = useVendorStore.getState().nextId;
 
+    // Double-check uid hasn't changed to prevent saving to wrong account
+    if ((user?.uid ?? null) !== saveUid) return;
+
     // saveCloudData now enqueues with retry (H-3 — was previously fire-and-forget)
-    saveCloudData(user.uid, {
+    saveCloudData(saveUid, {
       invoices,
       expenses,
       clients,

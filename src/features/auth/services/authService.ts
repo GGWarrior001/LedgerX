@@ -58,8 +58,17 @@ export const authService = {
       console.warn('[LedgerX] Failed to set auth persistence:', err);
     });
 
-    return onAuthStateChanged(auth, (user) => {
-      if (!user) useAuthStore.getState().initializeGuestSession();
+    return onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        useAuthStore.getState().initializeGuestSession();
+        // Ensure financial data is cleared on sign-out to guest mode
+        try {
+          const { dataService } = await import('@/shared/services/dataService');
+          await dataService.loadFreshData();
+        } catch (err) {
+          console.error('[authService] Failed to clear data on sign-out:', err);
+        }
+      }
       useAuthStore.getState().setUser(user);
       useAuthStore.getState().setLoading(false);
     });
