@@ -4,7 +4,7 @@
  * Changes from v3:
  *   - Array size caps: `invoices`, `expenses`, `clients`, `vendors` now capped
  *     at 10,000 items each (prevents memory exhaustion via malicious import)
- *   - `boundedString` now trims AND strips null bytes (\x00) to prevent
+ *   - `boundedString` now trims AND strips null bytes to prevent
  *     UTF-8 null injection attacks in string comparisons
  *   - `dateString` now validates ISO 8601 format more strictly
  *   - `money` maximum raised to match Firestore rule (`1_000_000_000`)
@@ -22,7 +22,7 @@ import type { Client, Expense, Invoice, Profile, Vendor } from './types';
  */
 const boundedString = (max: number) =>
   z.string()
-    .transform(s => s.replace(new RegExp(String.fromCharCode(0), 'g'), '').trim())
+    .transform(s => s.split(String.fromCharCode(0)).join('').trim())
     .pipe(z.string().max(max));
 
 const money = z.coerce

@@ -296,12 +296,12 @@ describe('StorageService – WebCrypto encryption layer', () => {
       // Get stored envelope
       const envelope = JSON.parse(localStorage.getItem('key')!);
 
-      // Corrupt 10 random bits
+      // Corrupt 10 distinct ciphertext bytes
       for (let i = 0; i < 10; i++) {
         const stored = JSON.parse(localStorage.getItem('key')!);
         const ctArray = webCrypto.decodeBase64(stored.ct);
-        const randomIndex = Math.floor(Math.random() * ctArray.length);
-        ctArray[randomIndex] ^= 0xFF;
+        const corruptionIndex = i % ctArray.length;
+        ctArray[corruptionIndex] ^= 0xFF;
         stored.ct = webCrypto.encodeBase64(ctArray);
         localStorage.setItem('key', JSON.stringify(stored));
 
