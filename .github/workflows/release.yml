@@ -83,17 +83,53 @@ jobs:
       - name: Decode Android release keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Missing ANDROID_KEYSTORE_BASE64 secret." >&2
+          set -euo pipefail
+          output_path="${GITHUB_WORKSPACE}/android/release.keystore"
+          temporary_path="${output_path}.tmp"
+          trap 'rm -f "$temporary_path"' EXIT
+
+          for secret_name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_PASSWORD
+          do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required Actions secret: ${secret_name}." >&2
+              exit 1
+            fi
+          done
+
+          umask 077
+          normalized_base64=$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')
+          if ! printf '%s' "$normalized_base64" | base64 --decode > "$temporary_path"; then
+            echo "ANDROID_KEYSTORE_BASE64 is not valid Base64." >&2
             exit 1
           fi
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.keystore
+          if [ ! -s "$temporary_path" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 decoded to an empty keystore file." >&2
+            exit 1
+          fi
+          decoded_base64=$(base64 "$temporary_path" | tr -d '[:space:]')
+          if [ "$decoded_base64" != "$normalized_base64" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 is not canonical Base64." >&2
+            exit 1
+          fi
+          if ! keytool -list -keystore "$temporary_path" \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "Decoded Android keystore is unreadable, or ANDROID_KEYSTORE_PASSWORD is incorrect." >&2
+            exit 1
+          fi
+          mv "$temporary_path" "$output_path"
 
       - name: Build signed release AAB
         working-directory: android
         env:
-          ANDROID_KEYSTORE_PATH: android/release.keystore
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/release.keystore
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}

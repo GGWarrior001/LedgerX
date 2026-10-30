@@ -19,6 +19,17 @@ if [ ! -f "$ANDROID_KEYSTORE_PATH" ] && [ ! -f "$PROJECT_ROOT/$ANDROID_KEYSTORE_
   exit 1
 fi
 
+if [ -f "$ANDROID_KEYSTORE_PATH" ]; then
+  KEYSTORE_FILE=$ANDROID_KEYSTORE_PATH
+else
+  KEYSTORE_FILE=$PROJECT_ROOT/$ANDROID_KEYSTORE_PATH
+fi
+
+if ! keytool -list -keystore "$KEYSTORE_FILE" -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+  echo "Android keystore is unreadable, or ANDROID_KEYSTORE_PASSWORD is incorrect." >&2
+  exit 1
+fi
+
 cd "$PROJECT_ROOT"
 
 npm run build
