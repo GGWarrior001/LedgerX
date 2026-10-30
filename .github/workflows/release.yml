@@ -92,6 +92,7 @@ jobs:
           temporary_path="${output_path}.tmp"
           trap 'rm -f "$temporary_path"' EXIT
 
+          missing_secrets=()
           for secret_name in \
             ANDROID_KEYSTORE_BASE64 \
             ANDROID_KEY_ALIAS \
@@ -99,10 +100,15 @@ jobs:
             ANDROID_KEY_PASSWORD
           do
             if [ -z "${!secret_name}" ]; then
-              echo "Missing required Actions secret: ${secret_name}." >&2
-              exit 1
+              missing_secrets+=("$secret_name")
             fi
           done
+          if [ "${#missing_secrets[@]}" -gt 0 ]; then
+            printf 'Required Android signing secrets unavailable to this job: %s\n' \
+              "${missing_secrets[*]}" >&2
+            echo "Configure them as repository/org secrets, or attach the environment that contains them." >&2
+            exit 1
+          fi
 
           umask 077
           normalized_base64=$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')
