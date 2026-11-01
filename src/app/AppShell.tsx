@@ -24,6 +24,7 @@ import { authService }     from '@/features/auth/services/authService';
 import { dataService }     from '@/shared/services/dataService';
 import { saveCloudData, fetchCloudData } from '@/lib/firestoreSync';
 import { storage }         from '@/lib/storage';
+import { AccountSyncGuard } from '@/shared/services/accountSyncGuard';
 import { useIdleLock }     from '@/hooks/useIdleLock';   // ← NEW: Phase 3 / H-6
 import AutoLock            from '@/features/auth/components/AutoLock';
 import Sidebar             from '@/components/layout/Sidebar';
@@ -94,12 +95,15 @@ export default function AppShell() {
   // ── Initial cloud sync on sign-in (wise-kalam) ─────────────────────────────
   const lastSyncedUid = useRef<string | null>(null);
   const prevUidRef = useRef<string | null>(null);
+  const syncGuardRef = useRef(new AccountSyncGuard());
   useEffect(() => {
     const currentUid = user?.uid ?? null;
     if (prevUidRef.current !== currentUid) {
       // Account context changed - clear financial data before loading new context
       const prevUid = prevUidRef.current;
       prevUidRef.current = currentUid;
+      if (currentUid) syncGuardRef.current.begin(currentUid);
+      dataService.clearInMemoryData();
       if (!currentUid) {
         // Signed out to guest mode - clear authenticated data
         (async () => {
@@ -131,6 +135,7 @@ export default function AppShell() {
 
     const doInitialSync = async () => {
       const syncUid = user.uid;
+      const syncGeneration = syncGuardRef.current.begin(syncUid);
       try {
         const cloud = await fetchCloudData(syncUid);
         // Prevent delayed responses from overwriting different account
@@ -144,6 +149,7 @@ export default function AppShell() {
       } finally {
         if ((user?.uid ?? null) === syncUid) {
           lastSyncedUid.current = user.uid;
+          syncGuardRef.current.complete(syncUid, syncGeneration);
         }
       }
     };
@@ -156,6 +162,7 @@ export default function AppShell() {
     const saveUid = user?.uid ?? null;
     if (!saveUid) return;
     if (locked) return;
+    if (!syncGuardRef.current.canWrite(saveUid)) return;
 
     const nextInvId    = useInvoiceStore.getState().nextId;
     const nextExpId    = useExpenseStore.getState().nextId;

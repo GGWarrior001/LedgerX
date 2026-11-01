@@ -4,6 +4,7 @@
   "version": "1.3.0",
   "description": "Privacy-first personal finance and accounting app",
   "author": "Tharun",
+  "repository": "https://github.com/GGWarrior001/LedgerX",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -18,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "electron": "electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder --publish never"
   },
   "build": {
     "appId": "com.ledgerx.app",
@@ -35,7 +36,8 @@
       "target": [
         "AppImage"
       ],
-      "maintainer": "Tharun"
+      "maintainer": "Tharun",
+      "category": "Finance"
     },
     "win": {
       "target": [
@@ -46,6 +48,11 @@
           ]
         }
       ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "GGWarrior001",
+      "repo": "LedgerX"
     }
   },
   "dependencies": {
@@ -85,7 +92,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^12.11.0",
+    "firebase": "^13.1.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
@@ -94,13 +101,13 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.61.1",
     "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "^6.30.1",
+    "react-router-dom": "^7.18.5",
     "recharts": "^2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "zod": "^3.25.76",
+    "zod": "^4.6.7",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -109,7 +116,7 @@
     "@capacitor/core": "^8.3.4",
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.57.0",
-    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/typography": "^0.5.20",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
     "@types/node": "^22.16.5",
@@ -117,8 +124,8 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
-    "electron": "^41.1.1",
-    "electron-builder": "^26.8.1",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -128,11 +135,19 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.38.0",
+    "typescript-eslint": "^8.72.1",
     "vite": "^6.4.2",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.5"
   },
   "overrides": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "postcss-selector-parser": "^6.1.5",
+    "@grpc/grpc-js": "^1.14.7",
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.3",
+    "rimraf": "^6.1.3",
+    "filelist": "^2.0.2",
+    "jake": "^13.0.3",
+    "ejs": "^5.0.1"
   }
 }

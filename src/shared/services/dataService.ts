@@ -103,15 +103,20 @@ export const dataService = {
   },
 
   /** Removes all domain keys from localStorage and resets stores to empty. */
+  clearInMemoryData(): void {
+    useInvoiceStore.setState({ invoices: [], nextInvId: 1 });
+    useExpenseStore.setState({ expenses: [], nextExpId: 1 });
+    useClientStore.setState({ clients: [], nextClientId: 1 });
+    useVendorStore.setState({ vendors: [], nextVendorId: 1 });
+    useAppStore.setState({ profile: null, notifications: [] });
+  },
+
   async loadFreshData(): Promise<void> {
     try {
       Object.values(STORAGE_KEYS)
         .filter(k => k !== STORAGE_KEYS.PROFILE && k !== STORAGE_KEYS.DARK && k !== STORAGE_KEYS.SETTINGS)
         .forEach(k => storage.remove(k));
-      useInvoiceStore.getState().hydrate([], 1);
-      useExpenseStore.getState().hydrate([], 1);
-      useClientStore.getState().hydrate([], 1);
-      useVendorStore.getState().hydrate([], 1);
+      dataService.clearInMemoryData();
       await useAppStore.getState().setNotifications([]);
     } catch (err) {
       console.error('[LedgerX] Failed to load fresh data:', err);

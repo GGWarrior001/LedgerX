@@ -39,7 +39,10 @@ const MIN_LENGTH = 12;
 const UPPERCASE_REGEX = /[A-Z]/;
 const LOWERCASE_REGEX = /[a-z]/;
 const NUMBER_REGEX = /[0-9]/;
-const SYMBOL_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/;
+const SYMBOL_CHARACTERS = "!@#$%^&*()_+-=[]{};':\"\\|,.<>?";
+
+const hasSymbol = (password: string): boolean =>
+  [...password].some((character) => SYMBOL_CHARACTERS.includes(character));
 
 /**
  * Internal helper to evaluate password rules without side effects or circular calls.
@@ -59,7 +62,7 @@ function evaluateRules(password: string): { errors: string[]; isValid: boolean }
   if (!NUMBER_REGEX.test(password)) {
     errors.push('Password must contain at least one digit (0-9)');
   }
-  if (!SYMBOL_REGEX.test(password)) {
+  if (!hasSymbol(password)) {
     errors.push('Password must contain at least one symbol (!@#$%^&*)');
   }
 
@@ -115,7 +118,7 @@ export function checkRequirements(password: string): RequirementCheck[] {
     {
       name: 'symbol',
       label: 'At least one symbol (!@#$%^&*)',
-      met: SYMBOL_REGEX.test(password),
+      met: hasSymbol(password),
     },
   ];
 }
@@ -200,7 +203,7 @@ function hasComplexitySignals(password: string): boolean {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumbers = /[0-9]/.test(password);
-  const hasSymbols = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/.test(password);
+  const hasSymbols = hasSymbol(password);
 
   // Count character type groups (max 4)
   const typeCount = [hasUppercase, hasLowercase, hasNumbers, hasSymbols].filter(Boolean)
@@ -214,7 +217,7 @@ function hasComplexitySignals(password: string): boolean {
   // Check position diversity: symbols/numbers spread throughout (not just at start/end)
   const middleRange = password.slice(1, -1);
   const hasNumbersInMiddle = /[0-9]/.test(middleRange);
-  const hasSymbolsInMiddle = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/.test(middleRange);
+  const hasSymbolsInMiddle = hasSymbol(middleRange);
 
   return hasNumbersInMiddle && hasSymbolsInMiddle;
 }
