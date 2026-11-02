@@ -148,6 +148,92 @@ jobs:
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/release.keystore
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Verify and stage Android release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/release.keystore
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          apk_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/app-release.apk"
+          aab_metadata_path="${GITHUB_WORKSPACE}/android/app/build/outputs/bundle/release/output-metadata.json"
+          apk_metadata_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/output-metadata.json"
+          version_name=$(node -p "require('./package.json').version")
+          staged_apk_path="${GITHUB_WORKSPACE}/release-artifacts/LedgerX-${version_name}.apk"
+
+          for required_path in "$apk_path" "$aab_metadata_path" "$apk_metadata_path"; do
+            if [ ! -f "$required_path" ]; then
+              echo "Expected Android release output is missing: ${required_path#"$GITHUB_WORKSPACE"/}" >&2
+              exit 1
+            fi
+          done
+
+          apksigner_path=$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner -executable -print 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$apksigner_path" ]; then
+            echo "Android build-tools apksigner was not found on the runner." >&2
+            exit 1
+          fi
+          if ! "$apksigner_path" verify --verbose --print-certs "$apk_path" >/tmp/ledgerx-apksigner.txt 2>&1; then
+            echo "The generated release APK failed apksigner verification." >&2
+            exit 1
+          fi
+
+          expected_fingerprint=$(keytool -list -v \
+            -keystore "$ANDROID_KEYSTORE_PATH" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEY_PASSWORD" 2>/dev/null |
+            awk -F': ' '/SHA256:/{gsub(":", "", $2); print tolower($2); exit}')
+          actual_fingerprint=$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}' /tmp/ledgerx-apksigner.txt)
+          if [ -z "$expected_fingerprint" ] || [ -z "$actual_fingerprint" ]; then
+            echo "Could not determine the release APK certificate fingerprint." >&2
+            exit 1
+          fi
+          if [ "$expected_fingerprint" != "$actual_fingerprint" ]; then
+            echo "The release APK certificate does not match the configured release keystore." >&2
+            exit 1
+          fi
+
+          node - "$aab_metadata_path" "$apk_metadata_path" <<'NODE'
+          const fs = require('node:fs');
+          const [aabPath, apkPath] = process.argv.slice(2);
+          const aab = JSON.parse(fs.readFileSync(aabPath, 'utf8'));
+          const apk = JSON.parse(fs.readFileSync(apkPath, 'utf8'));
+          const aabElement = aab.elements?.[0];
+          const apkElement = apk.elements?.[0];
+          const fields = ['applicationId', 'versionCode', 'versionName'];
+          for (const field of fields) {
+            const aabValue = field === 'applicationId' ? aab.applicationId : aabElement?.[field];
+            const apkValue = field === 'applicationId' ? apk.applicationId : apkElement?.[field];
+            if (aabValue === undefined || apkValue === undefined || aabValue !== apkValue) {
+              console.error(`Android AAB/APK ${field} mismatch.`);
+              process.exit(1);
+            }
+          }
+          NODE
+
+          mkdir -p "${GITHUB_WORKSPACE}/release-artifacts"
+          cp "$apk_path" "$staged_apk_path"
+          echo "Staged signed APK: ${staged_apk_path#"$GITHUB_WORKSPACE"/}"
+
+      - name: Upload signed Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LedgerX-android-apk
+          path: release-artifacts/LedgerX-*.apk
+          if-no-files-found: error
+
   electron:
     name: Build Electron (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
