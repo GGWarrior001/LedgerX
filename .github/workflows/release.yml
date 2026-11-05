@@ -167,12 +167,11 @@ jobs:
           set -euo pipefail
 
           apk_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/app-release.apk"
-          aab_metadata_path="${GITHUB_WORKSPACE}/android/app/build/outputs/bundle/release/output-metadata.json"
-          apk_metadata_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/output-metadata.json"
+          aab_path="${GITHUB_WORKSPACE}/android/app/build/outputs/bundle/release/app-release.aab"
           version_name=$(node -p "require('./package.json').version")
           staged_apk_path="${GITHUB_WORKSPACE}/release-artifacts/LedgerX-${version_name}.apk"
 
-          for required_path in "$apk_path" "$aab_metadata_path" "$apk_metadata_path"; do
+          for required_path in "$apk_path" "$aab_path"; do
             if [ ! -f "$required_path" ]; then
               echo "Expected Android release output is missing: ${required_path#"$GITHUB_WORKSPACE"/}" >&2
               exit 1
@@ -205,23 +204,19 @@ jobs:
             exit 1
           fi
 
-          node - "$aab_metadata_path" "$apk_metadata_path" <<'NODE'
-          const fs = require('node:fs');
-          const [aabPath, apkPath] = process.argv.slice(2);
-          const aab = JSON.parse(fs.readFileSync(aabPath, 'utf8'));
-          const apk = JSON.parse(fs.readFileSync(apkPath, 'utf8'));
-          const aabElement = aab.elements?.[0];
-          const apkElement = apk.elements?.[0];
-          const fields = ['applicationId', 'versionCode', 'versionName'];
-          for (const field of fields) {
-            const aabValue = field === 'applicationId' ? aab.applicationId : aabElement?.[field];
-            const apkValue = field === 'applicationId' ? apk.applicationId : apkElement?.[field];
-            if (aabValue === undefined || apkValue === undefined || aabValue !== apkValue) {
-              console.error(`Android AAB/APK ${field} mismatch.`);
-              process.exit(1);
-            }
-          }
-          NODE
+          apkanalyzer_path=$(find "${ANDROID_HOME}" -type f -name apkanalyzer -executable -print 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$apkanalyzer_path" ]; then
+            echo "Android SDK apkanalyzer was not found on the runner." >&2
+            exit 1
+          fi
+          aab_summary=$("$apkanalyzer_path" apk summary "$aab_path")
+          apk_summary=$("$apkanalyzer_path" apk summary "$apk_path")
+          if [ "$aab_summary" != "$apk_summary" ]; then
+            echo "Android AAB/APK package ID, version code, or version name mismatch." >&2
+            echo "AAB summary: ${aab_summary}" >&2
+            echo "APK summary: ${apk_summary}" >&2
+            exit 1
+          fi
 
           mkdir -p "${GITHUB_WORKSPACE}/release-artifacts"
           cp "$apk_path" "$staged_apk_path"
