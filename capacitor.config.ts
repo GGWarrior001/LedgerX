@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       // Keep the splash visible until the app explicitly calls SplashScreen.hide()
       launchAutoHide: false,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#020817',
       androidSplashResourceName: 'splash',
       showSpinner: false,
     },

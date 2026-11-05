@@ -28,6 +28,7 @@ import { AccountSyncGuard } from '@/shared/services/accountSyncGuard';
 import { useIdleLock }     from '@/hooks/useIdleLock';   // ← NEW: Phase 3 / H-6
 import AutoLock            from '@/features/auth/components/AutoLock';
 import Sidebar             from '@/components/layout/Sidebar';
+import BrandLogo           from '@/components/branding/BrandLogo';
 import Topbar              from '@/components/layout/Topbar';
 import { Toaster }         from '@/components/ui/toaster';
 
@@ -191,7 +192,10 @@ export default function AppShell() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <BrandLogo variant="mark" className="w-14 h-14 rounded-2xl animate-pulse" />
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }

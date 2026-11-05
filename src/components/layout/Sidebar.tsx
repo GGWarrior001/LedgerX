@@ -3,6 +3,7 @@ import { ViewId } from '@/lib/types';
 import { currentFY, getInitials } from '@/lib/constants';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 const NAV_SECTIONS = [
   {
@@ -56,7 +57,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-[22px] border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground text-[13px] font-bold tracking-tight shrink-0">LX</div>
+        <BrandLogo variant="mark" className="w-8 h-8 rounded-lg shrink-0" />
         <div>
           <div className="font-semibold text-[15px] tracking-tight" style={{ color: '#F9FAFB' }}>LedgerX</div>
           <div className="text-[10px] tracking-wider uppercase" style={{ color: '#6B7280' }}>{fyLabel}</div>

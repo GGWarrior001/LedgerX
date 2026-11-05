@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/shared/stores/useAppStore';
 import { MigrationRequiredError } from '@/lib/storage';
 import { toast } from 'sonner';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 export default function AutoLock() {
   const unlock = useAppStore(s => s.unlock);
@@ -39,9 +40,7 @@ export default function AutoLock() {
         className="bg-card rounded-2xl p-8 w-[380px] max-w-[95vw] text-center"
         style={{ animation: 'fadeIn 300ms ease' }}
       >
-        <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground text-lg font-bold mx-auto mb-4">
-          LX
-        </div>
+        <BrandLogo variant="mark" className="w-14 h-14 rounded-2xl mx-auto mb-4" />
         <h2 className="text-lg font-bold mb-1">Session Locked</h2>
         <p className="text-sm text-muted-foreground mb-5">
           {unlocking ? 'Deriving encryption key... please wait' : 'Enter your passcode to unlock LedgerX'}

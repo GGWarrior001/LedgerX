@@ -17,7 +17,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 239 84% 67%;
+    --primary: 214 95% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -26,7 +26,7 @@
     --muted: 220 14% 96%;
     --muted-foreground: 218 11% 55%;
 
-    --accent: 239 84% 67%;
+    --accent: 214 95% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -43,25 +43,25 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --ring: 214 95% 55%;
 
     --radius: 0.625rem;
 
     --sidebar-bg: 222 47% 7%;
     --sidebar-foreground: 218 11% 65%;
-    --sidebar-active: 239 84% 67%;
-    --sidebar-active-bg: 239 84% 67% / 0.15;
+    --sidebar-active: 214 95% 55%;
+    --sidebar-active-bg: 214 95% 55% / 0.15;
     --sidebar-hover: 0 0% 100% / 0.04;
     --sidebar-border: 0 0% 100% / 0.05;
     --sidebar-text-active: 229 100% 84%;
     --sidebar-text-white: 210 40% 98%;
 
     --sidebar-background: 222 47% 7%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 214 95% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 214 95% 55%;
   }
 
   .dark {
@@ -74,7 +74,7 @@
     --popover: 226 47% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 239 84% 67%;
+    --primary: 214 95% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 47% 15%;
@@ -83,7 +83,7 @@
     --muted: 222 47% 15%;
     --muted-foreground: 218 11% 55%;
 
-    --accent: 239 84% 67%;
+    --accent: 214 95% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
@@ -100,7 +100,7 @@
 
     --border: 0 0% 100% / 0.07;
     --input: 0 0% 100% / 0.07;
-    --ring: 239 84% 67%;
+    --ring: 214 95% 55%;
 
     --sidebar-bg: 230 50% 4%;
     --sidebar-foreground: 218 11% 45%;
@@ -253,7 +253,7 @@
 
   .onboarding-overlay {
     @apply fixed inset-0 z-[90] flex items-center justify-center;
-    background: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(243 75% 59%) 50%, hsl(228 50% 5%) 100%);
+    background: linear-gradient(135deg, hsl(214 95% 55%) 0%, hsl(224 86% 37%) 50%, hsl(228 50% 5%) 100%);
   }
 
   .privacy-blur {

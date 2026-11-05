@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">LedgerX mark</title>
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b6cff"/>
+      <stop offset="0.5" stop-color="#082b96"/>
+      <stop offset="1" stop-color="#04c9f4"/>
+    </linearGradient>
+    <linearGradient id="x" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#65d9ff"/>
+      <stop offset="0.5" stop-color="#087bff"/>
+      <stop offset="1" stop-color="#08d4ef"/>
+    </linearGradient>
+    <linearGradient id="l" x1="0" y1="0" x2="0.8" y2="1">
+      <stop stop-color="#fff"/>
+      <stop offset="1" stop-color="#b5c9f3"/>
+    </linearGradient>
+    <clipPath id="clip"><rect x="38" y="38" width="436" height="436" rx="112"/></clipPath>
+  </defs>
+  <rect x="38" y="38" width="436" height="436" rx="112" fill="#020817" stroke="url(#frame)" stroke-width="8"/>
+  <g clip-path="url(#clip)" opacity=".8">
+    <path d="M-25 252 245 38h115L-25 388Z" fill="#0759e8" opacity=".55"/>
+    <path d="m210 474 264-210v110L350 474Z" fill="#0759e8" opacity=".6"/>
+  </g>
+  <path d="M151 172v145c0 18 10 29 30 29h93l-45 47h-66c-55 0-82-28-82-78V172Z" fill="url(#l)"/>
+  <path d="m206 172 85 91 56-61 30-30h78l-117 121 105 100h-78l-57-57-54 57h-78l93-100-103-121Z" fill="url(#x)"/>
+</svg>

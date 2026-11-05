@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" role="img" aria-labelledby="title">
+  <title id="title">LedgerX</title>
+  <defs><linearGradient id="x" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#65d9ff"/><stop offset=".5" stop-color="#087bff"/><stop offset="1" stop-color="#08d4ef"/></linearGradient></defs>
+  <g transform="translate(250 16) scale(.5)">
+    <rect x="38" y="38" width="436" height="436" rx="112" fill="#020817" stroke="#0a45bb" stroke-width="8"/>
+    <path d="M151 172v145c0 18 10 29 30 29h93l-45 47h-66c-55 0-82-28-82-78V172Z" fill="#dbeafe"/>
+    <path d="m206 172 85 91 56-61 30-30h78l-117 121 105 100h-78l-57-57-54 57h-78l93-100-103-121Z" fill="url(#x)"/>
+  </g>
+  <text x="460" y="365" text-anchor="middle" fill="#0f172a" font-family="Inter,Segoe UI,sans-serif" font-size="92" font-weight="700" letter-spacing="-3">Ledger<tspan fill="url(#x)">X</tspan></text>
+</svg>
