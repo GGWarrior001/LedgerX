@@ -13,7 +13,7 @@
  * data loading, auth state, cloud sync). Only the additions are annotated.
  */
 
-import { useEffect, useCallback, lazy, Suspense, useRef } from 'react';
+import { useEffect, useCallback, lazy, Suspense, useRef, useState } from 'react';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { useAuthStore }    from '@/features/auth/store/useAuthStore';
 import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
@@ -52,6 +52,7 @@ const ViewSuspense = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default function AppShell() {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const locked     = useAppStore(s => s.locked);
   const activeView = useAppStore(s => s.activeView);
   const dark       = useAppStore(s => s.dark);
@@ -214,9 +215,9 @@ export default function AppShell() {
 
   return (
     <div className={`flex h-screen overflow-hidden bg-background ${dark ? 'dark' : ''}`}>
-      <Sidebar />
+      <Sidebar open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen} />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Topbar />
+        <Topbar onMenuClick={() => setMobileSidebarOpen(true)} />
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <ViewSuspense>
             {viewMap[activeView] ?? <DashboardView />}
