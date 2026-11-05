@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { authService, getAuthErrorMessage } from '../services/authService';
 import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 export default function AuthView() {
   const mode                    = useAuthStore(s => s.authMode);
@@ -67,16 +68,11 @@ export default function AuthView() {
       >
         <div
           className="px-8 pt-[30px] pb-6"
-          style={{ background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(243 75% 59%))' }}
+          style={{ background: 'linear-gradient(135deg, hsl(214 95% 55%), hsl(224 86% 37%))' }}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base mb-4"
-                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-              >
-                LX
-              </div>
+              <BrandLogo variant="mark" className="w-11 h-11 rounded-xl mb-4" />
               <h1 className="text-[22px] font-bold tracking-tight mb-1.5" style={{ color: '#fff' }}>
                 {mode === 'sign-in' ? 'Welcome back' : 'Create your account'}
               </h1>
