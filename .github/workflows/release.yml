@@ -188,14 +188,27 @@ jobs:
             exit 1
           fi
 
-          expected_fingerprint=$(keytool -list -v \
+          expected_certificate=$(mktemp)
+          trap 'rm -f "$expected_certificate"' EXIT
+          if ! keytool -exportcert \
             -keystore "$ANDROID_KEYSTORE_PATH" \
             -alias "$ANDROID_KEY_ALIAS" \
             -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-            -keypass "$ANDROID_KEY_PASSWORD" 2>/dev/null |
-            awk -F': ' '/SHA256:/{gsub(":", "", $2); print tolower($2); exit}')
-          actual_fingerprint=$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}' /tmp/ledgerx-apksigner.txt)
-          if [ -z "$expected_fingerprint" ] || [ -z "$actual_fingerprint" ]; then
+            -file "$expected_certificate" >/dev/null 2>&1; then
+            echo "Could not export the release certificate from the configured keystore." >&2
+            exit 1
+          fi
+          expected_fingerprint=$(sha256sum "$expected_certificate" | awk '{print tolower($1)}')
+          actual_fingerprint=$(awk '
+            /Signer #[0-9]+ certificate SHA-256 digest:/ {
+              sub(/^.*digest:[[:space:]]*/, "")
+              gsub(/[^[:xdigit:]]/, "")
+              print tolower($0)
+              exit
+            }
+          ' /tmp/ledgerx-apksigner.txt)
+          if ! [[ "$expected_fingerprint" =~ ^[0-9a-f]{64}$ ]] ||
+             ! [[ "$actual_fingerprint" =~ ^[0-9a-f]{64}$ ]]; then
             echo "Could not determine the release APK certificate fingerprint." >&2
             exit 1
           fi
