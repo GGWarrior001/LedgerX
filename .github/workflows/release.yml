@@ -157,6 +157,28 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
+      - name: Install pinned bundletool
+        run: |
+          set -euo pipefail
+          bundletool_version="1.18.3"
+          bundletool_path="${RUNNER_TEMP}/bundletool-all-${bundletool_version}.jar"
+          bundletool_url="https://github.com/google/bundletool/releases/download/${bundletool_version}/bundletool-all-${bundletool_version}.jar"
+          expected_sha256="a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29"
+
+          curl --fail --location --silent --show-error "$bundletool_url" --output "$bundletool_path"
+          printf '%s  %s\n' "$expected_sha256" "$bundletool_path" | sha256sum --check --status
+          java -jar "$bundletool_path" version
+          echo "BUNDLETOOL_PATH=${bundletool_path}" >> "$GITHUB_ENV"
+
+      - name: Install XML validation tools
+        run: |
+          set -euo pipefail
+          if ! command -v xmllint >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends libxml2-utils
+          fi
+          xmllint --version
+
       - name: Verify and stage Android release APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/release.keystore
@@ -234,12 +256,40 @@ jobs:
             echo "Android SDK apkanalyzer was not found on the runner." >&2
             exit 1
           fi
-          aab_summary=$("$apkanalyzer_path" apk summary "$aab_path")
-          apk_summary=$("$apkanalyzer_path" apk summary "$apk_path")
-          if [ "$aab_summary" != "$apk_summary" ]; then
-            echo "Android AAB/APK package ID, version code, or version name mismatch." >&2
-            echo "AAB summary: ${aab_summary}" >&2
-            echo "APK summary: ${apk_summary}" >&2
+          aab_manifest_path="${RUNNER_TEMP}/ledgerx-aab-manifest.xml"
+          if ! java -jar "$BUNDLETOOL_PATH" dump manifest --bundle="$aab_path" > "$aab_manifest_path"; then
+            echo "Could not read the Android App Bundle manifest with bundletool." >&2
+            exit 1
+          fi
+          aab_package_id=$(xmllint --xpath 'string(/*/@package)' "$aab_manifest_path" | tr -d '[:space:]')
+          aab_version_code=$(xmllint --xpath 'string(/*/@*[local-name()="versionCode"])' "$aab_manifest_path" | tr -d '[:space:]')
+          aab_version_name=$(xmllint --xpath 'string(/*/@*[local-name()="versionName"])' "$aab_manifest_path" | tr -d '[:space:]')
+          apk_package_id=$("$apkanalyzer_path" manifest application-id "$apk_path" | tr -d '[:space:]')
+          apk_version_code=$("$apkanalyzer_path" manifest version-code "$apk_path" | tr -d '[:space:]')
+          apk_version_name=$("$apkanalyzer_path" manifest version-name "$apk_path" | tr -d '[:space:]')
+
+          for metadata_name in \
+            aab_package_id aab_version_code aab_version_name \
+            apk_package_id apk_version_code apk_version_name
+          do
+            if [ -z "${!metadata_name}" ]; then
+              echo "Android release metadata is missing: ${metadata_name}." >&2
+              exit 1
+            fi
+          done
+
+          echo "AAB metadata: package=${aab_package_id}, versionCode=${aab_version_code}, versionName=${aab_version_name}"
+          echo "APK metadata: package=${apk_package_id}, versionCode=${apk_version_code}, versionName=${apk_version_name}"
+          if [ "$aab_package_id" != "$apk_package_id" ]; then
+            echo "Android AAB/APK package ID mismatch." >&2
+            exit 1
+          fi
+          if [ "$aab_version_code" != "$apk_version_code" ]; then
+            echo "Android AAB/APK version code mismatch." >&2
+            exit 1
+          fi
+          if [ "$aab_version_name" != "$apk_version_name" ]; then
+            echo "Android AAB/APK version name mismatch." >&2
             exit 1
           fi
 
