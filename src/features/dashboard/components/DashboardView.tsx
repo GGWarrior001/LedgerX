@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useInvoiceStore } from '@/features/invoices/store/useInvoiceStore';
+import { useClientStore } from '@/features/clients/store/useClientStore';
 import { useExpenseStore } from '@/features/expenses/store/useExpenseStore';
 import { useAppStore }     from '@/shared/stores/useAppStore';
 import { fmt, fmtDate, getGreeting, EXPENSE_CATEGORIES } from '@/lib/constants';
@@ -12,9 +14,11 @@ type RecentTransaction = RecentInvoice | RecentExpense;
 export default function DashboardView() {
   const invoices    = useInvoiceStore(s => s.invoices);
   const expenses    = useExpenseStore(s => s.expenses);
+  const clients     = useClientStore(s => s.clients);
   const privacyMode = useAppStore(s => s.privacyMode);
   const profile     = useAppStore(s => s.profile);
   const setActiveView = useAppStore(s => s.setActiveView);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => localStorage.getItem('ledgerx-onboarding-dismissed') === 'true');
   const cs          = profile?.currency ?? '₹';
 
   const rev         = invoices.filter(i => i.status === 'paid').reduce((a, i) => a + i.amount, 0);
@@ -33,6 +37,20 @@ export default function DashboardView() {
 
   const firstName = profile?.name?.split(' ')[0] || '';
   const greeting  = getGreeting(firstName);
+  const onboardingSteps = [
+    { label: 'Add your first client', view: 'clients' as const, complete: clients.length > 0 },
+    { label: 'Record your first transaction', view: 'expenses' as const, complete: expenses.length > 0 },
+    { label: 'Create your first invoice', view: 'invoices' as const, complete: invoices.length > 0 },
+  ];
+  const completedSteps = onboardingSteps.filter(step => step.complete).length;
+  const showOnboarding = !onboardingDismissed && completedSteps < onboardingSteps.length;
+
+  useEffect(() => {
+    if (completedSteps === 3) {
+      localStorage.removeItem('ledgerx-onboarding-dismissed');
+      setOnboardingDismissed(false);
+    }
+  }, [completedSteps]);
 
   const txns: RecentTransaction[] = [
     ...invoices.map(i => ({ ...i, _type: 'invoice' as const, _date: new Date(i.issueDate || 0) })),
@@ -100,9 +118,56 @@ export default function DashboardView() {
         </div>
       </div>
 
+      {showOnboarding && (
+        <section className="bg-card border border-border rounded-xl p-4 md:p-5 mb-5" aria-labelledby="getting-started-title">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="getting-started-title" className="text-sm font-semibold">Get started with LedgerX</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                {completedSteps} of {onboardingSteps.length} steps complete
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('ledgerx-onboarding-dismissed', 'true');
+                setOnboardingDismissed(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              aria-label="Dismiss getting started panel"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-3 mb-3" aria-label={`${completedSteps} of ${onboardingSteps.length} onboarding steps complete`} role="progressbar" aria-valuemin={0} aria-valuemax={onboardingSteps.length} aria-valuenow={completedSteps}>
+            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }} />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {onboardingSteps.map(step => (
+              <button
+                type="button"
+                key={step.label}
+                onClick={() => !step.complete && setActiveView(step.view)}
+                disabled={step.complete}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                  step.complete
+                    ? 'border-success/30 bg-success/5 text-success'
+                    : 'border-border hover:border-primary hover:bg-muted cursor-pointer'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0 text-[10px]">
+                  {step.complete ? '✓' : onboardingSteps.indexOf(step) + 1}
+                </span>
+                {step.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 mb-5">
-        <div className="stat-card">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3.5 mb-5">
+        <div className="stat-card p-3 md:p-5">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Total Revenue
             <div className="w-[34px] h-[34px] rounded-lg flex items-center justify-center" style={{ background: 'rgba(5,150,105,0.1)' }}>
@@ -111,7 +176,7 @@ export default function DashboardView() {
           </div>
           <div className="text-2xl font-bold tracking-tight tabular-nums mb-1.5">{val(rev)}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card p-3 md:p-5">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Total Expenses
             <div className="w-[34px] h-[34px] rounded-lg flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.1)' }}>
@@ -120,7 +185,7 @@ export default function DashboardView() {
           </div>
           <div className="text-2xl font-bold tracking-tight tabular-nums mb-1.5">{val(exp)}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card p-3 md:p-5">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Net Profit
             <div className="w-[34px] h-[34px] rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.1)' }}>
@@ -129,7 +194,7 @@ export default function DashboardView() {
           </div>
           <div className="text-2xl font-bold tracking-tight tabular-nums mb-1.5">{signedVal(profit)}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card p-3 md:p-5">
           <div className="text-[11.5px] text-muted-foreground font-medium tracking-wide mb-2 flex items-center justify-between">
             Outstanding
             <div className="w-[34px] h-[34px] rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.1)' }}>
@@ -144,8 +209,9 @@ export default function DashboardView() {
         </div>
       </div>
 
+      <div className="flex flex-col">
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-3.5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-3.5 mb-5 order-2 lg:order-1">
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -201,14 +267,14 @@ export default function DashboardView() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3.5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3.5 order-1 lg:order-2">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-[18px] pt-[18px]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[13.5px] font-semibold">Recent Transactions</span>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="data-table">
               <thead>
                 <tr>
@@ -253,6 +319,32 @@ export default function DashboardView() {
               </tbody>
             </table>
           </div>
+          <div className="divide-y divide-border md:hidden" aria-label="Recent transactions">
+            {txns.length === 0 ? (
+              <p className="px-5 py-6 text-center text-muted-foreground text-sm">No transactions yet</p>
+            ) : txns.map((t, i) => {
+              const isInv = t._type === 'invoice';
+              const name = isInv ? t.clientName : (t.vendor || t.description);
+              const status = isInv ? t.status : 'paid';
+              return (
+                <article key={i} className="p-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-sm truncate">{name}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isInv ? 'Invoice' : 'Expense'} · {fmtDate(isInv ? t.issueDate : t.date)}
+                    </p>
+                    <span className={`badge-status badge-${status} mt-2`}>
+                      <span className="w-[5px] h-[5px] rounded-full" style={{ background: 'currentColor' }} />
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </span>
+                  </div>
+                  <span className={`font-semibold tabular-nums whitespace-nowrap ${isInv && status === 'paid' ? 'text-success' : !isInv || status === 'overdue' ? 'text-destructive' : ''}`}>
+                    {privacyMode ? '***' : `${isInv ? (status === 'paid' ? '+' : status === 'overdue' ? '−' : '') : '−'}${cs}${fmt(t.amount)}`}
+                  </span>
+                </article>
+              );
+            })}
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -284,6 +376,7 @@ export default function DashboardView() {
           })}
         </div>
       </div>
+    </div>
     </div>
   );
 }

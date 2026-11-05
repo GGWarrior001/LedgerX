@@ -65,7 +65,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Nav Sections */}
-      <div className="flex-1 px-3 mt-1.5 overflow-y-auto">
+      <div className="min-h-0 flex-1 px-3 mt-1.5 overflow-y-auto">
         {NAV_SECTIONS.map(section => (
           <div key={section.label} className="mb-0.5">
             <div className="text-[10px] font-semibold tracking-widest uppercase px-2 pt-2.5 pb-1.5" style={{ color: '#4B5563' }}>{section.label}</div>
@@ -89,7 +89,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Bottom nav */}
-      <div className="px-3 mb-2">
+      <div className="shrink-0 px-3 mb-2">
         <div
           className={`nav-item ${activeView === 'settings' ? 'active' : ''}`}
           onClick={() => handleNav('settings')}
@@ -112,7 +112,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* User Footer */}
-      <div className="mt-auto px-4 py-3.5 flex items-center gap-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="shrink-0 mt-auto px-4 py-3.5 flex items-center gap-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[11px] font-semibold shrink-0">{ini}</div>
         <div>
           <div className="text-[12.5px] font-medium" style={{ color: '#D1D5DB' }}>{p?.name || 'Your Name'}</div>
@@ -129,7 +129,7 @@ export default function Sidebar({ open, onOpenChange }: SidebarProps) {
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-[270px] p-0 ledger-sidebar border-r-0">
+        <SheetContent side="left" className="w-[270px] p-0 ledger-sidebar border-r-0 overflow-y-auto">
           <SidebarContent onNavigate={() => onOpenChange?.(false)} />
         </SheetContent>
       </Sheet>

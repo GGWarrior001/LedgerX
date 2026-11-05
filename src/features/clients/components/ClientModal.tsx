@@ -1,18 +1,37 @@
+import { useState } from 'react';
 import { clientService } from '../services/clientService';
+import { useClientStore } from '../store/useClientStore';
 
-interface Props { onClose: () => void; }
+interface Props {
+  onClose: () => void;
+  onCreated?: (name: string) => void;
+}
 
-export default function ClientModal({ onClose }: Props) {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+export default function ClientModal({ onClose, onCreated }: Props) {
+  const clients = useClientStore(s => s.clients);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    clientService.addClient({
-      name:  fd.get('name')  as string,
+    const name = (fd.get('name') as string).trim();
+    if (clients.some(client => client.name.trim().toLowerCase() === name.toLowerCase())) {
+      setError('A client with this name already exists.');
+      return;
+    }
+    try {
+      await clientService.addClient({
+      name,
       city:  fd.get('city')  as string,
       email: fd.get('email') as string,
       phone: fd.get('phone') as string,
-    });
-    onClose();
+      });
+      onCreated?.(name);
+      onClose();
+    } catch (err) {
+      console.error('[LedgerX] Failed to create client:', err);
+      setError('Unable to create client. Please try again.');
+    }
   };
 
   return (
@@ -24,23 +43,24 @@ export default function ClientModal({ onClose }: Props) {
         </div>
         <form onSubmit={handleSubmit} className="p-5">
           <div className="form-field">
-            <label>Company Name</label>
-            <input type="text" name="name" placeholder="e.g. Acme Corp" required />
+            <label htmlFor="client-name">Company Name</label>
+            <input id="client-name" type="text" name="name" placeholder="e.g. Acme Corp" required />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="form-field">
-              <label>City</label>
-              <input type="text" name="city" placeholder="e.g. Bangalore" required />
+              <label htmlFor="client-city">City</label>
+              <input id="client-city" type="text" name="city" placeholder="e.g. Bangalore" required />
             </div>
             <div className="form-field">
-              <label>Email</label>
-              <input type="email" name="email" placeholder="contact@company.com" required />
+              <label htmlFor="client-email">Email</label>
+              <input id="client-email" type="email" name="email" placeholder="contact@company.com" required />
             </div>
           </div>
           <div className="form-field">
-            <label>Phone</label>
-            <input type="tel" name="phone" placeholder="+91 98765 43210" />
+            <label htmlFor="client-phone">Phone</label>
+            <input id="client-phone" type="tel" name="phone" placeholder="+91 98765 43210" />
           </div>
+          {error && <p className="text-[11px] text-destructive mb-2" role="alert">{error}</p>}
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="button"
