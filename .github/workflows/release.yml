@@ -5,16 +5,8 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: "Release tag in vMAJOR.MINOR.PATCH format"
-        required: true
-        type: string
 
 permissions: {}
-
-env:
-  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -27,51 +19,55 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      release_tag: ${{ steps.validate_release_version.outputs.release_tag }}
+      package_version: ${{ steps.validate_release_version.outputs.package_version }}
+      android_version_code: ${{ steps.validate_release_version.outputs.android_version_code }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Validate release version
+        id: validate_release_version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Release tag must match vMAJOR.MINOR.PATCH: ${RELEASE_TAG:-<empty>}" >&2
-            exit 1
+          release_info=$(node scripts/release-version.mjs)
+          package_version=$(jq -r '.packageVersion' <<<"$release_info")
+          release_tag=$(jq -r '.releaseTag' <<<"$release_info")
+          android_version_code=$(jq -r '.versionCode' <<<"$release_info")
+
+          tag_exists=false
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${release_tag}" >/dev/null 2>&1; then
+            tag_exists=true
           fi
-          package_version=$(node -p "require('./package.json').version")
-          tag_version="${RELEASE_TAG#v}"
-          if [ "$package_version" != "$tag_version" ]; then
-            echo "Release tag ${RELEASE_TAG} does not match package.json version ${package_version}." >&2
-            exit 1
+          release_exists=false
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${release_tag}" >/dev/null 2>&1; then
+            release_exists=true
           fi
-          version_code=$(node -e '
-            const parts = process.argv[1].split(".").map(Number);
-            if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) process.exit(1);
-            process.stdout.write(String(parts[0] * 1000000 + parts[1] * 1000 + parts[2]));
-          ' "$package_version") || {
-            echo "package.json version must contain three non-negative numeric components." >&2
-            exit 1
+          node --input-type=module - "$tag_exists" "$release_exists" "$release_tag" "$GITHUB_EVENT_NAME" <<'NODE'
+          import { validateReleaseAvailability } from './scripts/release-version.mjs';
+          const [tagExists, releaseExists, releaseTag, eventName] = process.argv.slice(2);
+          try {
+            validateReleaseAvailability({
+              tagExists: tagExists === 'true',
+              releaseExists: releaseExists === 'true',
+              releaseTag,
+              eventName,
+            });
+          } catch (error) {
+            console.error(error.message);
+            process.exit(1);
           }
-          if [ "$version_code" -le 0 ]; then
-            echo "Computed Android versionCode is invalid: ${version_code}." >&2
-            exit 1
-          fi
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-              echo "Release tag already exists: ${RELEASE_TAG}" >&2
-              exit 1
-            fi
-          elif [ "$RELEASE_TAG" != "$GITHUB_REF_NAME" ]; then
-            echo "Push release tag does not match the workflow ref." >&2
-            exit 1
-          fi
-          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "A GitHub release already exists for ${RELEASE_TAG}." >&2
-            exit 1
-          fi
-          echo "Validated release ${RELEASE_TAG}: package version ${package_version}, Android versionCode ${version_code}."
+          NODE
+
+          {
+            echo "release_tag=${release_tag}"
+            echo "package_version=${package_version}"
+            echo "android_version_code=${android_version_code}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Validated release ${release_tag}: package version ${package_version}, Android versionCode ${android_version_code}."
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -104,6 +100,10 @@ jobs:
     needs: verify
     permissions:
       contents: read
+    env:
+      RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
+      PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
+      ANDROID_VERSION_CODE: ${{ needs.verify.outputs.android_version_code }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -240,15 +240,8 @@ jobs:
 
           apk_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/app-release.apk"
           aab_path="${GITHUB_WORKSPACE}/android/app/build/outputs/bundle/release/app-release.aab"
-          version_name=$(node -p "require('./package.json').version")
-          version_code=$(node -e '
-            const parts = process.argv[1].split(".").map(Number);
-            if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) process.exit(1);
-            process.stdout.write(String(parts[0] * 1000000 + parts[1] * 1000 + parts[2]));
-          ' "$version_name") || {
-            echo "package.json version must contain three non-negative numeric components." >&2
-            exit 1
-          }
+          version_name="${PACKAGE_VERSION}"
+          version_code="${ANDROID_VERSION_CODE}"
           staged_apk_path="${GITHUB_WORKSPACE}/release-artifacts/LedgerX-${version_name}.apk"
 
           for required_path in "$apk_path" "$aab_path"; do
@@ -385,6 +378,9 @@ jobs:
     needs: verify
     permissions:
       contents: read
+    env:
+      RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
+      PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
     strategy:
       fail-fast: false
       matrix:
@@ -421,9 +417,13 @@ jobs:
     name: Draft GitHub release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: [android, electron]
+    needs: [verify, android, electron]
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
+      PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
+      ANDROID_VERSION_CODE: ${{ needs.verify.outputs.android_version_code }}
     steps:
       - name: Download release artifacts
         uses: actions/download-artifact@v4

@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "scripts/**/*.test.mjs"],
     alias: {
       "firebase/firestore": path.resolve(__dirname, "./src/test/mocks/firebase-firestore.ts"),
       "firebase/auth": path.resolve(__dirname, "./src/test/mocks/firebase-auth.ts"),
