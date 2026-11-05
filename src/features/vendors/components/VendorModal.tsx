@@ -24,22 +24,22 @@ export default function VendorModal({ onClose }: Props) {
         </div>
         <form onSubmit={handleSubmit} className="p-5">
           <div className="form-field">
-            <label>Vendor Name</label>
-            <input type="text" name="name" placeholder="e.g. AWS India" required />
+            <label htmlFor="vendor-name">Vendor Name</label>
+            <input id="vendor-name" type="text" name="name" placeholder="e.g. AWS India" required />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="form-field">
-              <label>City</label>
-              <input type="text" name="city" placeholder="e.g. Mumbai" />
+              <label htmlFor="vendor-city">City</label>
+              <input id="vendor-city" type="text" name="city" placeholder="e.g. Mumbai" />
             </div>
             <div className="form-field">
-              <label>Email</label>
-              <input type="email" name="email" placeholder="billing@vendor.com" />
+              <label htmlFor="vendor-email">Email</label>
+              <input id="vendor-email" type="email" name="email" placeholder="billing@vendor.com" />
             </div>
           </div>
           <div className="form-field">
-            <label>Phone</label>
-            <input type="tel" name="phone" placeholder="+91 98765 43210" />
+            <label htmlFor="vendor-phone">Phone</label>
+            <input id="vendor-phone" type="tel" name="phone" placeholder="+91 98765 43210" />
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button

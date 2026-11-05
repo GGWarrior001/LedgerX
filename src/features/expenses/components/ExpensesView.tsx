@@ -51,7 +51,7 @@ export default function ExpensesView() {
         <div className="px-5 pt-[18px]">
           <div className="text-[13.5px] font-semibold">All Expenses</div>
         </div>
-        <table className="data-table mt-3">
+        <table className="data-table mt-3 hidden md:table">
           <thead>
             <tr>
               <th className="!pl-5">Description</th>
@@ -89,6 +89,31 @@ export default function ExpensesView() {
             ))}
           </tbody>
         </table>
+        <div className="md:hidden divide-y divide-border" aria-label="Expense list">
+          {expenses.length === 0 ? (
+            <p className="px-5 py-6 text-center text-muted-foreground text-sm">
+              No expenses recorded yet. Click "Record Expense" to add one.
+            </p>
+          ) : expenses.map(e => (
+            <article key={e.id} className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-medium text-sm break-words">{e.description}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{e.vendor} · {fmtDate(e.date)}</p>
+                </div>
+                <span className="font-semibold tabular-nums text-destructive whitespace-nowrap">
+                  {privacyMode ? '***' : `−${cs}${fmt(e.amount)}`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="badge-status" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366F1' }}>{e.category}</span>
+                <span className={`font-medium ${e.receipt === 'attached' ? 'text-success' : 'text-warning'}`}>
+                  {e.receipt === 'attached' ? '✓ Receipt attached' : '⚠ Receipt pending'}
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
 
       {showModal && <ExpenseModal onClose={() => setShowModal(false)} />}
