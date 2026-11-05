@@ -241,6 +241,14 @@ jobs:
           apk_path="${GITHUB_WORKSPACE}/android/app/build/outputs/apk/release/app-release.apk"
           aab_path="${GITHUB_WORKSPACE}/android/app/build/outputs/bundle/release/app-release.aab"
           version_name=$(node -p "require('./package.json').version")
+          version_code=$(node -e '
+            const parts = process.argv[1].split(".").map(Number);
+            if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) process.exit(1);
+            process.stdout.write(String(parts[0] * 1000000 + parts[1] * 1000 + parts[2]));
+          ' "$version_name") || {
+            echo "package.json version must contain three non-negative numeric components." >&2
+            exit 1
+          }
           staged_apk_path="${GITHUB_WORKSPACE}/release-artifacts/LedgerX-${version_name}.apk"
 
           for required_path in "$apk_path" "$aab_path"; do
@@ -342,6 +350,22 @@ jobs:
             echo "Android AAB/APK version name mismatch." >&2
             exit 1
           fi
+          if [ "$aab_version_name" != "$version_name" ]; then
+            echo "AAB version name ${aab_version_name} does not match package.json version ${version_name}." >&2
+            exit 1
+          fi
+          if [ "$apk_version_name" != "$version_name" ]; then
+            echo "APK version name ${apk_version_name} does not match package.json version ${version_name}." >&2
+            exit 1
+          fi
+          if [ "$aab_version_code" != "$version_code" ]; then
+            echo "AAB version code ${aab_version_code} does not match expected package.json version code ${version_code}." >&2
+            exit 1
+          fi
+          if [ "$apk_version_code" != "$version_code" ]; then
+            echo "APK version code ${apk_version_code} does not match expected package.json version code ${version_code}." >&2
+            exit 1
+          fi
 
           mkdir -p "${GITHUB_WORKSPACE}/release-artifacts"
           cp "$apk_path" "$staged_apk_path"
@@ -427,6 +451,16 @@ jobs:
           asset_count=$(jq '.assets | length' <<<"$release_json")
           if [ "$asset_count" -eq 0 ]; then
             echo "Draft release ${RELEASE_TAG} has no assets." >&2
+            exit 1
+          fi
+          release_tag=$(jq -r '.tag_name // empty' <<<"$release_json")
+          if [ "$release_tag" != "$RELEASE_TAG" ]; then
+            echo "GitHub release tag mismatch: expected ${RELEASE_TAG}, received ${release_tag:-<empty>}." >&2
+            exit 1
+          fi
+          release_draft=$(jq -r '.draft // false' <<<"$release_json")
+          if [ "$release_draft" != "true" ]; then
+            echo "GitHub release ${RELEASE_TAG} is not a draft." >&2
             exit 1
           fi
           required_assets=("app-release.aab" "LedgerX-${RELEASE_TAG#v}.apk")
