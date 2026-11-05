@@ -1,7 +1,7 @@
 {
   "name": "ledgerx",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.5.1",
   "description": "Privacy-first personal finance and accounting app",
   "author": "Tharun",
   "repository": "https://github.com/GGWarrior001/LedgerX",
