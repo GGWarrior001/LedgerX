@@ -438,6 +438,7 @@ jobs:
           draft: true
           prerelease: false
           tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.event_name == 'workflow_dispatch' && github.sha || '' }}
           name: LedgerX ${{ env.RELEASE_TAG }}
           body: Automated release for ${{ env.RELEASE_TAG }}.
           files: release-artifacts/**/*
