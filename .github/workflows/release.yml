@@ -430,7 +430,27 @@ jobs:
         with:
           path: release-artifacts
 
+      - name: Create manual release tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag_ref="refs/tags/${RELEASE_TAG}"
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release tag already exists and will not be recreated: ${RELEASE_TAG}"
+            exit 0
+          fi
+          if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f "ref=${tag_ref}" \
+            -f "sha=${GITHUB_SHA}" >/dev/null; then
+            echo "Could not create release tag ${RELEASE_TAG} at commit ${GITHUB_SHA}." >&2
+            exit 1
+          fi
+          echo "Created ${tag_ref} at ${GITHUB_SHA}."
+
       - name: Create draft release
+        id: create_release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -446,34 +466,59 @@ jobs:
       - name: Verify draft release assets
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.create_release.outputs.id }}
+          RELEASE_ACTION_URL: ${{ steps.create_release.outputs.url }}
         run: |
           set -euo pipefail
-          release_json=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")
+          release_id="${RELEASE_ID}"
+          release_action_url="${RELEASE_ACTION_URL}"
+          if [[ ! "$release_id" =~ ^[0-9]+$ ]]; then
+            echo "Release action returned an invalid release ID: ${release_id:-<empty>}." >&2
+            exit 1
+          fi
+          if ! release_json=$(gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}"); then
+            echo "Could not retrieve release ID ${release_id} returned by the release action." >&2
+            echo "Release action URL: ${release_action_url:-<empty>}" >&2
+            exit 1
+          fi
+          release_url=$(jq -r '.html_url // empty' <<<"$release_json")
+          release_tag=$(jq -r '.tag_name // empty' <<<"$release_json")
+          release_draft=$(jq -r '.draft // false' <<<"$release_json")
+          asset_names=$(jq -r '[.assets[]?.name] | join(", ")' <<<"$release_json")
+          print_release_diagnostics() {
+            echo "Release ID: ${release_id}" >&2
+            echo "Release tag: ${release_tag:-<empty>}" >&2
+            echo "Release URL: ${release_url:-${release_action_url:-<empty>}}" >&2
+            echo "Release assets: ${asset_names:-<none>}" >&2
+          }
+          if [ "$release_tag" != "$RELEASE_TAG" ]; then
+            echo "GitHub release tag mismatch: expected ${RELEASE_TAG}, received ${release_tag:-<empty>}." >&2
+            print_release_diagnostics
+            exit 1
+          fi
+          if [ "$release_draft" != "true" ]; then
+            echo "GitHub release ${RELEASE_TAG} is not a draft." >&2
+            print_release_diagnostics
+            exit 1
+          fi
           asset_count=$(jq '.assets | length' <<<"$release_json")
           if [ "$asset_count" -eq 0 ]; then
             echo "Draft release ${RELEASE_TAG} has no assets." >&2
-            exit 1
-          fi
-          release_tag=$(jq -r '.tag_name // empty' <<<"$release_json")
-          if [ "$release_tag" != "$RELEASE_TAG" ]; then
-            echo "GitHub release tag mismatch: expected ${RELEASE_TAG}, received ${release_tag:-<empty>}." >&2
-            exit 1
-          fi
-          release_draft=$(jq -r '.draft // false' <<<"$release_json")
-          if [ "$release_draft" != "true" ]; then
-            echo "GitHub release ${RELEASE_TAG} is not a draft." >&2
+            print_release_diagnostics
             exit 1
           fi
           required_assets=("app-release.aab" "LedgerX-${RELEASE_TAG#v}.apk")
           for required_asset in "${required_assets[@]}"; do
             if ! jq -e --arg name "$required_asset" '.assets[] | select(.name == $name and (.size | tonumber) > 0)' <<<"$release_json" >/dev/null; then
               echo "Draft release ${RELEASE_TAG} is missing a non-empty asset: ${required_asset}." >&2
+              print_release_diagnostics
               exit 1
             fi
           done
           for asset_pattern in '\.AppImage$' '\.exe$'; do
             if ! jq -e --arg pattern "$asset_pattern" '.assets[] | select((.name | test($pattern)) and (.size | tonumber) > 0)' <<<"$release_json" >/dev/null; then
               echo "Draft release ${RELEASE_TAG} is missing a non-empty Electron asset matching ${asset_pattern}." >&2
+              print_release_diagnostics
               exit 1
             fi
           done
